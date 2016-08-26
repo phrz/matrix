@@ -1,225 +1,261 @@
-/* Daniel R. Reynolds
-   SMU Mathematics
-   19 June 2015 */
 
-// Inclusions
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sstream>
 #include <fstream>
-#include "matrix.hpp"
+
+#include "Matrix.h"
+
 using namespace std;
 
 // singularity tolerance
 #define STOL 1.e-15
 
-
 // This file implements the operations defined in Matrix class, along with a
 // variety of linear algebra functions defined based on matrices and vectors
 
-//-------------------------------------------------------------
-
-///// general Matrix class routines /////
+/// general Matrix class routines
 
 // general constructor (initializes values to 0.0)
-Matrix::Matrix(size_t m, size_t n) {
-  nrows = m;
-  ncols = n;
-  data.resize(n);
-  for (size_t j=0; j<n; j++)
-    data[j].resize(m);
+Matrix::Matrix(Index m, Index n) {
+	_rows = m;
+	_columns = n;
+	
+	_data.resize(_columns);
+	for (Index column = 0; column < _columns; column++) {
+		_data[column].resize(_rows);
+	}
 }
 
 // column-vector matrix constructor (initializes values to 0.0)
-Matrix::Matrix(size_t m) {
-  nrows = m;
-  ncols = 1;
-  data.resize(1);
-  data[0].resize(m);
+Matrix::Matrix(Index m) {
+	_rows = m;
+	_columns = 1;
+
+	_data.resize(_columns);
+	_data[0].resize(_rows);
 }
 
-// constructor that copies input data (double array)
-Matrix::Matrix(size_t m, size_t n, double* vals) {
-  nrows = m;
-  ncols = n;
-  data.resize(n);
-  for (size_t j=0; j<n; j++)
-    data[j].resize(m);
-  size_t idx=0;
-  for (size_t j=0; j<n; j++)
-    for (size_t i=0; i<m; i++)
-      data[j][i] = vals[idx++];
+// constructor that copies input data (MathNumber array)
+Matrix::Matrix(Index m, Index n, MathNumber* source) {
+	_rows = m;
+	_columns = n;
+	_data.resize(_columns);
+	
+	for (Index j=0; j<n; j++) {
+		_data[j].resize(m);
+	}
+	
+	Index sourceIndex=0;
+	for (Index column = 0; column < _columns; column++) {
+		for (Index row=0; row < _rows; row++) {
+			_data[column][row] = source[sourceIndex++];
+		}
+	}
 }
 
 // constructor that copies input data (1D vector)
-Matrix::Matrix(size_t m, size_t n, vector<double> vals) {
-  if (m*n != vals.size())
-    cerr << "Matrix constructor error: incompatible shape with vector length\n";
-  nrows = m;
-  ncols = n;
-  data.resize(n);
-  for (size_t j=0; j<n; j++)
-    data[j].resize(m);
-  size_t idx=0;
-  for (size_t j=0; j<n; j++)
-    for (size_t i=0; i<m; i++)
-      data[j][i] = vals[idx++];
+Matrix::Matrix(Index m, Index n, MathVector source) {
+	if (m*n != source.size()) {
+		cerr << "Matrix constructor error: incompatible shape with vector length\n";
+	}
+	
+	_rows = m;
+	_columns = n;
+	_data.resize(n);
+	
+	Index sourceIndex=0;
+	for (Index column=0; column<_columns; column++) {
+		_data[column].resize(m);
+		
+		for (Index row = 0; row < _rows; row++) {
+			_data[column][row] = source[sourceIndex++];
+		}
+	}
 }
 
 // constructor that copies input data (1D vector) into a column vector
-Matrix::Matrix(vector<double> vals) {
-  nrows = vals.size();
-  ncols = 1;
-  data.resize(1);
-  data[0].resize(nrows);
-  for (size_t i=0; i<nrows; i++)
-    data[0][i] = vals[i];
+Matrix::Matrix(MathVector vals) {
+	_rows = vals.size();
+	_columns = 1;
+	_data.resize(1);
+	_data[0].resize(_rows);
+
+	for (Index row = 0; row < _rows; row++) {
+		_data[0][row] = vals[row];
+	}
 }
 
 // constructor that copies input data (2D vector)
-Matrix::Matrix(vector< vector<double> > vals) {
-  ncols = vals.size();
-  nrows = vals[0].size();
-  for (size_t j=0; j<ncols; j++)
-    if (vals[j].size() != nrows)
-      cerr << "Matrix constructor error: rows in 2D vector must have the same length\n";
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      data[j][i] = vals[j][i];
+Matrix::Matrix(Math2DArray source) {
+	_columns = source.size();
+	_rows = source[0].size();
+	
+	for (Index column = 0; column < _columns; column++) {
+		if (source[column].size() != _rows) {
+			cerr << "Matrix constructor error: rows in 2D vector must have the same length\n";
+		}
+		
+		for (Index row = 0; row < _rows; row++) {
+			_data[column][row] = source[column][row];
+		}
+	}
 }
 
 // string utility routines we'll need for string-based constructor
 vector<string>& split(const string& s, char delim, vector<string>& elems) {
-  stringstream ss(s);
-  string item;
-  while (getline(ss, item, delim)) 
-    elems.push_back(item);
-  return elems;
+	stringstream ss(s);
+	string item;
+	
+	while (getline(ss, item, delim)) {
+		elems.push_back(item);
+	}
+	
+	return elems;
 }
+
 vector<string> split(const string& s, char delim) {
-  vector<string> elems;
-  split(s, delim, elems);
-  return elems;
+	vector<string> elems;
+
+	split(s, delim, elems);
+
+	return elems;
 }
 
 // string-based matrix constructor
 Matrix::Matrix(string mat_spec) {
 
-  // initialize empty matrix
-  nrows = 0;
-  ncols = 0;
+	// initialize empty matrix
+	_rows = 0;
+	_columns = 0;
 
-  // parse string to determine matrix rows
-  vector<string> rows = split(mat_spec, ';');
-  size_t m = rows.size();
-  if (m < 1) {
-    cerr << "string Matrix constructor error: empty string!\n";
-    return;
-  }
+	// parse string to determine matrix rows
+	vector<string> rows = split(mat_spec, ';');
+	Index m = rows.size();
+	if (m < 1) {
+		cerr << "string Matrix constructor error: empty string!\n";
+		return;
+	}
 
-  // verify that all rows have the same number of columns
-  vector<string> strrow = split(rows[0], ',');
-  size_t n = strrow.size();
-  for (size_t i=1; i<m; i++) {
-    strrow = split(rows[i], ',');
-    if (strrow.size() != n) {
-      cerr << "string Matrix constructor error: all rows must have the same number of columns!\n";
-      return;
-    }
-  }
-   
-  // allocate matrix data
-  data.resize(n);
-  for (size_t j=0; j<n; j++)
-    data[j].resize(m, 0.0);
+	// verify that all rows have the same number of columns
+	vector<string> strrow = split(rows[0], ',');
+	Index n = strrow.size();
+	for (Index i=1; i<m; i++) {
+		strrow = split(rows[i], ',');
+		if (strrow.size() != n) {
+			cerr << "string Matrix constructor error: all rows must have the same number of columns!\n";
+			return;
+		}
+	}
 
-  // fill Matrix structure
-  nrows = m;
-  ncols = n;
-  for (size_t i=0; i<nrows; i++) {
-    strrow = split(rows[i], ',');
-    for (size_t j=0; j<ncols; j++) {
-      stringstream ss(strrow[j]);
-      ss >> data[j][i];
-    }
-  }
+	// allocate matrix data
+	_data.resize(n);
+	for (Index j=0; j<n; j++) {
+		_data[j].resize(m, 0.0);
+	}
+
+	// fill Matrix structure
+	_rows = m;
+	_columns = n;
+	for (Index row = 0; row < _rows; row++) {
+		strrow = split(rows[row], ',');
+		for (Index column = 0; column < _columns; column++) {
+			stringstream ss(strrow[column]);
+			ss >> _data[column][row];
+		}
+	}
 }
 
 // copy constructor
 Matrix::Matrix(const Matrix& A) {
-  nrows = A.nrows;
-  ncols = A.ncols;
-  data.resize(ncols);
-  for (size_t j=0; j<ncols; j++) {
-    data[j].resize(nrows);
-    data[j] = A.data[j];
-  }
+	_rows = A.rows();
+	_columns = A.columns();
+	_data.resize(_columns);
+
+	for (Index column = 0; column < _columns; column++) {
+		_data[column].resize(_rows);
+		_data[column] = A._data[column];
+	}
 }
 
 // C = A
 Matrix& Matrix::operator=(const Matrix& A) {
-  nrows = A.nrows;
-  ncols = A.ncols;
-  data.resize(ncols);
-  for (size_t j=0; j<ncols; j++) {
-    data[j].resize(nrows);
-    data[j] = A.data[j];
-  }
-  return *this;
+	_rows = A.rows();
+	_columns = A.columns();
+	_data.resize(_columns);
+
+	for (Index column = 0; column < _columns; column++) {
+		_data[column].resize(_rows);
+		_data[column] = A._data[column];
+	}
+	
+	return *this;
 }
 
-// dimension accessor routines
-size_t Matrix::Size() const { 
-  return ncols*nrows; 
+Matrix::Matrix(Matrix&& A) {
+	*this = std::move(A);
 }
-size_t Matrix::Columns() const { 
-  return ncols; 
+
+/// Move assignment operator
+Matrix& Matrix::operator=(Matrix&& A) {
+	if(this != &A) {
+		_rows = _columns = 0;
+		_data.resize(0);
+		
+		_rows = A.rows();
+		_columns = A.columns();
+		
+		_data = std::move(A._data);
+		A._rows = 0;
+		A._columns = 0;
+		A._data.clear();
+	}
+	return *this;
 }
-size_t Matrix::Rows() const { 
-  return nrows; 
-}
+
 
 // column accessor routines
-vector<double>& Matrix::Column(size_t i) {
-  return data[i];
-}
-vector<double>& Matrix::operator[](size_t i) {
-  return data[i];
+MathVector& Matrix::column(Index i) {
+  return _data[i];
 }
 
 // row accessor (copy) routine
-vector<double> Matrix::Row(size_t i) {
-  vector<double> tmp(ncols);
-  for (size_t j=0; j<ncols; j++)
-    tmp[j] = data[j][i];
-  return tmp;
+MathVector Matrix::row(Index row) {
+	MathVector rowVector = MathVector(_columns);
+	
+	for (Index column = 0; column < _columns; column++) {
+		rowVector[column] = _data[column][row];
+	}
+	
+	return rowVector;
 }
 
-// Matlab/Fortran Matrix accessors (entry (i,j))
-double& Matrix::operator()(size_t i, size_t j) {
-  return data[j][i];
+// Matlab/Fortran Matrix accessors (row, column)
+MathNumber& Matrix::operator()(Index row, Index column) {
+	return _data[column][row];
 }
-double Matrix::operator()(size_t i, size_t j) const {
-  return data[j][i];
+MathNumber Matrix::operator()(Index row, Index column) const {
+	return _data[column][row];
 }
-double& Matrix::operator()(size_t idx) {
-  return data[idx/nrows][idx%nrows];
+MathNumber& Matrix::operator()(Index linearIndex) {
+	return _data[linearIndex / _rows][linearIndex % _rows];
 }
-double Matrix::operator()(size_t idx) const {
-  return data[idx/nrows][idx%nrows];
+MathNumber Matrix::operator()(Index linearIndex) const {
+	return _data[linearIndex / _rows][linearIndex % _rows];
 }
 
 // write myself to stdout
 int Matrix::Write() const {
-
-  // print data to screen 
-  for (size_t i=0; i<nrows; i++) {
-    for (size_t j=0; j<ncols; j++)
-      printf("  %.17g", data[j][i]);
-    printf("\n");
-  }
-  return 0;
+	// print data to screen 
+	for (Index row = 0; row < _rows; row++) {
+		for (Index column = 0; column < _columns; column++) {
+			printf("  %.17g", _data[column][row]);
+		}
+		printf("\n");
+	}
+	return 0;
 }
 
 // write myself to a file
@@ -240,9 +276,9 @@ int Matrix::Write(const char *outfile) const {
   }
 
   // print data to file
-  for (size_t i=0; i<nrows; i++) {
-    for (size_t j=0; j<ncols; j++)
-      fprintf(fptr, "  %.16g", data[j][i]);
+  for (Index row = 0; row < _rows; row++) {
+    for (Index column = 0; column < _columns; column++)
+      fprintf(fptr, "  %.16g", _data[column][row]);
     fprintf(fptr, "\n");
   }
 
@@ -253,9 +289,9 @@ int Matrix::Write(const char *outfile) const {
 
 // streaming output routine
 ostream& operator<<(ostream& os, const Matrix& A) {
-  for(size_t i=0; i<A.Rows(); i++) {
-    for(size_t j=0; j<A.Columns(); j++)
-      os << "  " << A.data[j][i];
+  for(Index i=0; i<A.rows(); i++) {
+    for(Index j=0; j<A.columns(); j++)
+      os << "  " << A._data[j][i];
     os << "\n";
   }
   return os;
@@ -268,19 +304,19 @@ ostream& operator<<(ostream& os, const Matrix& A) {
 int Matrix::Product(const Matrix& A, const Matrix& X) {
 
   // check that array sizes match
-  if (A.nrows != nrows || A.ncols != X.nrows || X.ncols != ncols) {
+  if (A._rows != _rows || A._columns != X._rows || X._columns != _columns) {
     cerr << "Matrix::Product error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << A.nrows << " x " << A.ncols 
-	 << "  Matrix 2 is " << X.nrows << " x " << X.ncols 
-	 << ", output is " << nrows << " x " << ncols << endl;
+    cerr << "  Matrix 1 is " << A._rows << " x " << A._columns 
+	 << "  Matrix 2 is " << X._rows << " x " << X._columns 
+	 << ", output is " << _rows << " x " << _columns << endl;
     return 1;
   }
   
   // perform operation
   this->Constant(0.0);
-  for (size_t k=0; k<ncols; k++) 
-    for (size_t j=0; j<A.Columns(); j++)
-      for (size_t i=0; i<A.Rows(); i++) 
+  for (Index k=0; k<_columns; k++) 
+    for (Index j=0; j<A.columns(); j++)
+      for (Index i=0; i<A.rows(); i++) 
 	(*this)(i,k) += A(i,j)*X(j,k);
     
   // return success
@@ -290,32 +326,32 @@ int Matrix::Product(const Matrix& A, const Matrix& X) {
 
 
 // C = a*A + b*B
-int Matrix::LinearSum(double a, const Matrix& A, double b, const Matrix& B) {
+int Matrix::LinearSum(MathNumber a, const Matrix& A, MathNumber b, const Matrix& B) {
 
   // check that array sizes match
-  if (A.nrows != nrows || A.ncols != ncols || 
-      B.nrows != nrows || B.ncols != ncols) {
+  if (A._rows != _rows || A._columns != _columns || 
+      B._rows != _rows || B._columns != _columns) {
     cerr << "Matrix::LinearSum error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << nrows << " x " << ncols 
-	 << ",  Matrix 2 is " << A.nrows << " x " << A.ncols 
-	 << ",  Matrix 3 is " << B.nrows << " x " << B.ncols << endl;
+    cerr << "  Matrix 1 is " << _rows << " x " << _columns 
+	 << ",  Matrix 2 is " << A._rows << " x " << A._columns 
+	 << ",  Matrix 3 is " << B._rows << " x " << B._columns << endl;
     return 1;
   }
   
   // perform operation
-  for (size_t j=0; j<B.ncols; j++)
-    for (size_t i=0; i<B.nrows; i++)
-      data[j][i] = a*A.data[j][i] + b*B.data[j][i];
+  for (Index j=0; j<B._columns; j++)
+    for (Index i=0; i<B._rows; i++)
+      _data[j][i] = a*A._data[j][i] + b*B._data[j][i];
   
   // return success
   return 0;
 }
 
 // C = C+a  (adds scalar a to my data)
-int Matrix::Add(double a) {
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      data[j][i] += a;
+int Matrix::Add(MathNumber a) {
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++)
+      _data[j][i] += a;
   return 0;
 }
 
@@ -323,29 +359,29 @@ int Matrix::Add(double a) {
 int Matrix::Multiply(const Matrix& A) {
 
   // check that array sizes match
-  if (A.nrows != nrows || A.ncols != ncols) {
+  if (A._rows != _rows || A._columns != _columns) {
     cerr << "Matrix::Multiply error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << nrows << " x " << ncols 
-	 << ",  Matrix 2 is " << A.nrows << " x " << A.ncols << endl;
+    cerr << "  Matrix 1 is " << _rows << " x " << _columns 
+	 << ",  Matrix 2 is " << A._rows << " x " << A._columns << endl;
     return 1;
   }
   
   // perform operation
-  for (size_t j=0; j<A.ncols; j++)
-    for (size_t i=0; i<A.nrows; i++)
-      data[j][i] *= A.data[j][i];
+  for (Index j=0; j<A._columns; j++)
+    for (Index i=0; i<A._rows; i++)
+      _data[j][i] *= A._data[j][i];
   
   // return success
   return 0;
 }
 
 // C = a*C  (scales my data by scalar a)
-int Matrix::Multiply(double a) {
+int Matrix::Multiply(MathNumber a) {
 
   // perform operation
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      data[j][i] *= a;
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++)
+      _data[j][i] *= a;
   
   // return success
   return 0;
@@ -355,19 +391,19 @@ int Matrix::Multiply(double a) {
 int Matrix::Divide(const Matrix& A) {
 
   // check that array sizes match
-  if (A.nrows != nrows || A.ncols != ncols) {
+  if (A._rows != _rows || A._columns != _columns) {
     cerr << "Matrix::Divide error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << nrows << " x " << ncols 
-	 << ",  Matrix 2 is " << A.nrows << " x " << A.ncols << endl;
+    cerr << "  Matrix 1 is " << _rows << " x " << _columns 
+	 << ",  Matrix 2 is " << A._rows << " x " << A._columns << endl;
     return 1;
   }
   
   // perform operation where A is nonzero, otherwise return with error
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++) {
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++) {
       if (A(i,j) == 0.0)
 	return 1;
-      data[j][i] /= A.data[j][i];
+      _data[j][i] /= A._data[j][i];
     }
 
   // return success
@@ -378,16 +414,16 @@ int Matrix::Divide(const Matrix& A) {
 int Matrix::Copy(const Matrix& A) {
 
   // check that array sizes match
-  if (A.nrows != nrows || A.ncols != ncols) {
+  if (A._rows != _rows || A._columns != _columns) {
     cerr << "Matrix::Copy error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << nrows << " x " << ncols 
-	 << ",  Matrix 2 is " << A.nrows << " x " << A.ncols << endl;
+    cerr << "  Matrix 1 is " << _rows << " x " << _columns 
+	 << ",  Matrix 2 is " << A._rows << " x " << A._columns << endl;
     return 1;
   }
   
   // perform operation
-  for (size_t j=0; j<A.ncols; j++)
-    data[j] = A.data[j];
+  for (Index j=0; j<A._columns; j++)
+    _data[j] = A._data[j];
   
   // return success
   return 0;
@@ -398,38 +434,38 @@ int Matrix::Copy(const Matrix& A) {
 int Matrix::Insert(const Matrix& A, long int is, long int ie, long int js, long int je) {
 
   // update is,ie,js,je if any are negative
-  is = (is < 0) ? is+nrows : is;
-  ie = (ie < 0) ? ie+nrows : ie;
-  js = (js < 0) ? js+ncols : js;
-  je = (je < 0) ? je+ncols : je;
+  is = (is < 0) ? is+_rows : is;
+  ie = (ie < 0) ? ie+_rows : ie;
+  js = (js < 0) ? js+_columns : js;
+  je = (je < 0) ? je+_columns : je;
 
   // check that array sizes match
-  if (A.nrows != (ie-is+1) || A.ncols != (je-js+1)) {
+  if (A._rows != (ie-is+1) || A._columns != (je-js+1)) {
     cerr << "Matrix::Insert error, matrix size mismatch\n";
-    cerr << "  supplied Matrix is " << A.nrows << " x " << A.ncols 
+    cerr << "  supplied Matrix is " << A._rows << " x " << A._columns 
 	 << ", but requested submatrix is " << ie-is+1 << " x " 
 	 << je-js+1 << endl;
     return 1;
   }
   // check for valid submatrix
-  if (is < 0 || is >= nrows) {
+  if (is < 0 || is >= _rows) {
     cerr << "Matrix::Insert error, requested submatrix does not exist\n";
-    cerr << "  illegal is = " << is << " (matrix has " << nrows << " rows)\n";
+    cerr << "  illegal is = " << is << " (matrix has " << _rows << " rows)\n";
     return 1;
   }
-  if (ie < 0 || ie >= nrows) {
+  if (ie < 0 || ie >= _rows) {
     cerr << "Matrix::Insert error, requested submatrix does not exist\n";
-    cerr << "  illegal ie = " << ie << " (matrix has " << nrows << " rows)\n";
+    cerr << "  illegal ie = " << ie << " (matrix has " << _rows << " rows)\n";
     return 1;
   }
-  if (js < 0 || js >= ncols) {
+  if (js < 0 || js >= _columns) {
     cerr << "Matrix::Insert error, requested submatrix does not exist\n";
-    cerr << "  illegal js = " << js << " (matrix has " << ncols << " columns)\n";
+    cerr << "  illegal js = " << js << " (matrix has " << _columns << " columns)\n";
     return 1;
   }
-  if (je < 0 || je >= ncols) {
+  if (je < 0 || je >= _columns) {
     cerr << "Matrix::Insert error, requested submatrix does not exist\n";
-    cerr << "  illegal je = " << je << " (matrix has " << ncols << " columns)\n";
+    cerr << "  illegal je = " << je << " (matrix has " << _columns << " columns)\n";
     return 1;
   }
   if (ie < is || je < js) {
@@ -440,35 +476,35 @@ int Matrix::Insert(const Matrix& A, long int is, long int ie, long int js, long 
   }
   
   // perform operation
-  for (size_t j=0; j<A.ncols; j++)  
-    for (size_t i=0; i<A.nrows; i++)  
-      data[j+js][i+is] = A.data[j][i];
+  for (Index j=0; j<A._columns; j++)  
+    for (Index i=0; i<A._rows; i++)  
+      _data[j+js][i+is] = A._data[j][i];
   
   // return success
   return 0;
 }
 
 //   C = a  (sets all entries of C to the scalar a)
-int Matrix::Constant(double a) {
-  for (size_t j=0; j<ncols; j++)  
-    for (size_t i=0; i<nrows; i++)  
-      data[j][i] = a;
+int Matrix::Constant(MathNumber a) {
+  for (Index j=0; j<_columns; j++)  
+    for (Index i=0; i<_rows; i++)  
+      _data[j][i] = a;
   return 0;
 }
 
 // C = C.^p (component-wise exponentiation of my data to the power p)
-int Matrix::Power(double p) {
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      data[j][i] = pow(data[j][i], p);
+int Matrix::Power(MathNumber p) {
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++)
+      _data[j][i] = pow(_data[j][i], p);
   return 0;
 }
 
 // Cij = |Cij| (component-wise absolute value of my data)
 int Matrix::Abs() {
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      data[j][i] = abs(data[j][i]);
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++)
+      _data[j][i] = abs(_data[j][i]);
   return 0;
 }
 
@@ -476,30 +512,30 @@ int Matrix::Abs() {
 int Matrix::Trans() {
 
   // perform operation in place if matrix is square
-  if (nrows == ncols) {
-    for (size_t i=0; i<nrows; i++)
-      for (size_t j=0; j<i; j++)
-	std::swap( data[j][i], data[i][j] );
+  if (_rows == _columns) {
+    for (Index i=0; i<_rows; i++)
+      for (Index j=0; j<i; j++)
+	std::swap( _data[j][i], _data[i][j] );
 
   // otherwise we need a new data array to ensure a clean transpose
   } else {
 
     // create temporary data array
-    vector< vector<double> > newdata;
-    newdata.resize(nrows);
-    for (size_t j=0; j<nrows; j++)
-      newdata[j].resize(ncols);
+    vector< MathVector > newdata;
+    newdata.resize(_rows);
+    for (Index j=0; j<_rows; j++)
+      newdata[j].resize(_columns);
 
     // copy transposed data over 
-    for (size_t j=0; j<ncols; j++)
-      for (size_t i=0; i<nrows; i++)
-	newdata[i][j] = data[j][i];
+    for (Index j=0; j<_columns; j++)
+      for (Index i=0; i<_rows; i++)
+	newdata[i][j] = _data[j][i];
 
     // copy newdata values into existing data array
-    data = newdata;
+    _data = newdata;
 
     // swap matrix dimensions
-    std::swap(nrows, ncols);
+    std::swap(_rows, _columns);
   }
   
   // return success
@@ -510,14 +546,14 @@ int Matrix::Trans() {
 int Matrix::Inverse() {
 
   // check that matrix sizes match
-  if (nrows != ncols) {
+  if (_rows != _columns) {
     cerr << "Inverse error, non-square matrix\n";
-    cerr << "  Matrix is " << nrows << " x " << ncols << endl;
+    cerr << "  Matrix is " << _rows << " x " << _columns << endl;
     return 1;
   }
 
   // create two temporary matrices for operation
-  Matrix B = Eye(nrows);
+  Matrix B = Eye(_rows);
   Matrix A = *this;
 
   // call existing LinearSolve routine for computations
@@ -543,27 +579,27 @@ Matrix Matrix::T() {
 Matrix Matrix::Extract(long int is, long int ie, long int js, long int je) {
 
   // update is,ie,js,je if any are negative
-  is = (is < 0) ? is+nrows : is;
-  ie = (ie < 0) ? ie+nrows : ie;
-  js = (js < 0) ? js+ncols : js;
-  je = (je < 0) ? je+ncols : je;
+  is = (is < 0) ? is+_rows : is;
+  ie = (ie < 0) ? ie+_rows : ie;
+  js = (js < 0) ? js+_columns : js;
+  je = (je < 0) ? je+_columns : je;
 
   // check that requested submatrix exists
-  if (is < 0 || is >= nrows) {
+  if (is < 0 || is >= _rows) {
     cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-    cerr << "  illegal is = " << is << " (matrix has " << nrows << " rows)\n";
+    cerr << "  illegal is = " << is << " (matrix has " << _rows << " rows)\n";
   }
-  if (ie < 0 || ie >= nrows) {
+  if (ie < 0 || ie >= _rows) {
     cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-    cerr << "  illegal ie = " << ie << " (matrix has " << nrows << " rows)\n";
+    cerr << "  illegal ie = " << ie << " (matrix has " << _rows << " rows)\n";
   }
-  if (js < 0 || js >= ncols) {
+  if (js < 0 || js >= _columns) {
     cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-    cerr << "  illegal js = " << js << " (matrix has " << ncols << " columns)\n";
+    cerr << "  illegal js = " << js << " (matrix has " << _columns << " columns)\n";
   }
-  if (je < 0 || je >= ncols) {
+  if (je < 0 || je >= _columns) {
     cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-    cerr << "  illegal je = " << je << " (matrix has " << ncols << " columns)\n";
+    cerr << "  illegal je = " << je << " (matrix has " << _columns << " columns)\n";
   }
   if (ie < is || je < js) {
     cerr << "Matrix::Extract error, requested submatrix does not exist\n";
@@ -575,9 +611,9 @@ Matrix Matrix::Extract(long int is, long int ie, long int js, long int je) {
   Matrix C(ie-is+1, je-js+1);
 
   // copy requested data
-  for (size_t j=js; j<=je; j++) 
-    for (size_t i=is; i<=ie; i++) 
-      C.data[j-js][i-is] = data[j][i];
+  for (Index j=js; j<=je; j++) 
+    for (Index i=is; i<=ie; i++) 
+      C._data[j-js][i-is] = _data[j][i];
 
   // return object
   return C;
@@ -587,20 +623,20 @@ Matrix Matrix::Extract(long int is, long int ie, long int js, long int je) {
 ///// Scalar output operators on matrices /////
 
 // minimum entry in the matrix
-double Matrix::Min() const {
-  double mn=data[0][0];
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      mn = std::min( mn, data[j][i] );
+MathNumber Matrix::Min() const {
+  MathNumber mn=_data[0][0];
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++)
+      mn = std::min( mn, _data[j][i] );
   return mn;
 }
 
 // maximum entry in the matrix
-double Matrix::Max() const {
-  double mx=data[0][0];
-  for (size_t j=0; j<ncols; j++)
-    for (size_t i=0; i<nrows; i++)
-      mx = std::max( mx, data[j][i] );
+MathNumber Matrix::Max() const {
+  MathNumber mx=_data[0][0];
+  for (Index j=0; j<_columns; j++)
+    for (Index i=0; i<_rows; i++)
+      mx = std::max( mx, _data[j][i] );
   return mx;
 }
 
@@ -608,14 +644,14 @@ double Matrix::Max() const {
 bool Matrix::operator==(const Matrix& A) const {
 
   // quick check for compatible sizes
-  if (A.nrows != nrows || A.ncols != ncols)
+  if (A._rows != _rows || A._columns != _columns)
     return false;
 
   // detailed check on values
   bool equal = true;
-  for (size_t j=0; j<ncols; j++)  
-    for (size_t i=0; i<nrows; i++)
-      equal &= (A.data[j][i] == data[j][i]);
+  for (Index j=0; j<_columns; j++)  
+    for (Index i=0; i<_rows; i++)
+      equal &= (A._data[j][i] == _data[j][i]);
   return equal;
 }
 
@@ -623,33 +659,33 @@ bool Matrix::operator==(const Matrix& A) const {
 //--- supplementary matrix arithmetic routines ---
 
 // column/row vector dot product, something else for matrices?
-double Dot(const Matrix& A, const Matrix& B) {
-  double sum=0.0;
-  if ((A.Columns() != B.Columns()) || (A.Rows() != B.Rows())) {
+MathNumber Dot(const Matrix& A, const Matrix& B) {
+  MathNumber sum=0.0;
+  if ((A.columns() != B.columns()) || (A.rows() != B.rows())) {
     cerr << "Dot error, matrix objects must be the same size\n";
   } else {
-    for (size_t j=0; j<A.Columns(); j++) 
-      for (size_t i=0; i<A.Rows(); i++)
+    for (Index j=0; j<A.columns(); j++) 
+      for (Index i=0; i<A.rows(); i++)
 	sum += A(i,j) * B(i,j);
   }
   return sum;
 }
 
 // matrix Frobenius norm (column/row vector 2-norm)
-double Norm(const Matrix& A) {
-  double sum=0.0;
-  for (size_t j=0; j<A.Columns(); j++) 
-    for (size_t i=0; i<A.Rows(); i++)
+MathNumber Norm(const Matrix& A) {
+  MathNumber sum=0.0;
+  for (Index j=0; j<A.columns(); j++) 
+    for (Index i=0; i<A.rows(); i++)
       sum += A(i,j)*A(i,j);
   return sqrt(sum);
 }
 
 // matrix infinity norm (column vector infinity norm, row vector one norm)
-double InfNorm(const Matrix& A) {
-  double mx=0.0;
-  for (size_t i=0; i<A.Rows(); i++) {
-    double sum=0.0;
-    for (size_t j=0; j<A.Columns(); j++) 
+MathNumber InfNorm(const Matrix& A) {
+  MathNumber mx=0.0;
+  for (Index i=0; i<A.rows(); i++) {
+    MathNumber sum=0.0;
+    for (Index j=0; j<A.columns(); j++) 
       sum += std::abs(A(i,j));
     mx = std::max(mx,sum);
   }
@@ -657,11 +693,11 @@ double InfNorm(const Matrix& A) {
 }
 
 // matrix one norm (column vector one norm, row vector infinity norm)
-double OneNorm(const Matrix& A) {
-  double mx=0.0;
-  for (size_t j=0; j<A.Columns(); j++) {
-    double sum=0.0;
-    for (size_t i=0; i<A.Rows(); i++)
+MathNumber OneNorm(const Matrix& A) {
+  MathNumber mx=0.0;
+  for (Index j=0; j<A.columns(); j++) {
+    MathNumber sum=0.0;
+    for (Index i=0; i<A.rows(); i++)
       sum += std::abs(A(i,j));
     mx = std::max(mx,sum);
   }
@@ -675,18 +711,18 @@ double OneNorm(const Matrix& A) {
 Matrix operator+(const Matrix& A, const Matrix& B) {
 
   // check that array sizes match
-  if (B.Rows() != A.Rows() || B.Columns() != A.Columns()) {
+  if (B.rows() != A.rows() || B.columns() != A.columns()) {
     cerr << "Matrix operator+ error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << A.Rows() << " x " << A.Columns()
-	 << ",  Matrix 2 is " << B.Rows() << " x " << B.Columns() << endl;
+    cerr << "  Matrix 1 is " << A.rows() << " x " << A.columns()
+	 << ",  Matrix 2 is " << B.rows() << " x " << B.columns() << endl;
     return Matrix(0,0);
   }
 
   // create new Mat for output, and do operation
-  Matrix C(A.Rows(),A.Columns());
-  for (size_t j=0; j<A.Columns(); j++)
-    for (size_t i=0; i<A.Rows(); i++)
-      C.data[j][i] = A.data[j][i] + B.data[j][i];
+  Matrix C(A.rows(),A.columns());
+  for (Index j=0; j<A.columns(); j++)
+    for (Index i=0; i<A.rows(); i++)
+      C._data[j][i] = A._data[j][i] + B._data[j][i];
 
   // return result
   return C;
@@ -696,18 +732,18 @@ Matrix operator+(const Matrix& A, const Matrix& B) {
 Matrix operator-(const Matrix& A, const Matrix& B) {
 
   // check that array sizes match
-  if (B.Rows() != A.Rows() || B.Columns() != A.Columns()) {
+  if (B.rows() != A.rows() || B.columns() != A.columns()) {
     cerr << "Matrix operator- error, matrix size mismatch\n";
-    cerr << "  Matrix 1 is " << A.Rows() << " x " << A.Columns()
-	 << ",  Matrix 2 is " << B.Rows() << " x " << B.Columns() << endl;
+    cerr << "  Matrix 1 is " << A.rows() << " x " << A.columns()
+	 << ",  Matrix 2 is " << B.rows() << " x " << B.columns() << endl;
     return Matrix(0,0);
   }
 
   // create new Mat for output, and do operation
-  Matrix C(A.Rows(),A.Columns());
-  for (size_t j=0; j<A.Columns(); j++)
-    for (size_t i=0; i<A.Rows(); i++)
-      C.data[j][i] = A.data[j][i] - B.data[j][i];
+  Matrix C(A.rows(),A.columns());
+  for (Index j=0; j<A.columns(); j++)
+    for (Index i=0; i<A.rows(); i++)
+      C._data[j][i] = A._data[j][i] - B._data[j][i];
 
   // return result
   return C;
@@ -717,46 +753,46 @@ Matrix operator-(const Matrix& A, const Matrix& B) {
 Matrix operator*(const Matrix& A, const Matrix& B) {
 
   // determine if either matrix is a scalar
-  bool A_scalar = ((A.Rows()==1) && (A.Columns()==1));
-  bool B_scalar = ((B.Rows()==1) && (B.Columns()==1));
+  bool A_scalar = ((A.rows()==1) && (A.columns()==1));
+  bool B_scalar = ((B.rows()==1) && (B.columns()==1));
 
   // scalar-times-matrix
   if (A_scalar) {
 
     // create new Matrix for output, and do operation
-    Matrix C(B.Rows(),B.Columns());
-    for (size_t j=0; j<B.Columns(); j++)
-      for (size_t i=0; i<B.Rows(); i++)
-	C.data[j][i] = A.data[0][0] * B.data[j][i];
+    Matrix C(B.rows(),B.columns());
+    for (Index j=0; j<B.columns(); j++)
+      for (Index i=0; i<B.rows(); i++)
+	C._data[j][i] = A._data[0][0] * B._data[j][i];
     return C;
     
   // scalar-times-matrix
   } else if (B_scalar) {
     
     // create new Mat for output, and do operation
-    Matrix C(A.Rows(),B.Columns());
-    for (size_t j=0; j<A.Columns(); j++)
-      for (size_t i=0; i<A.Rows(); i++)
-	C.data[j][i] = A.data[j][i] * B.data[0][0];
+    Matrix C(A.rows(),B.columns());
+    for (Index j=0; j<A.columns(); j++)
+      for (Index i=0; i<A.rows(); i++)
+	C._data[j][i] = A._data[j][i] * B._data[0][0];
     return C;
     
   // normal matrix product
   } else {
 
     // check that array sizes are acceptable
-    if (B.Rows() != A.Columns()) {
+    if (B.rows() != A.columns()) {
       cerr << "Matrix operator* error, inner dimension mismatch\n";
-      cerr << "  Matrix 1 is " << A.Rows() << " x " << A.Columns()
-	   << ",  Matrix 2 is " << B.Rows() << " x " << B.Columns() << endl;
+      cerr << "  Matrix 1 is " << A.rows() << " x " << A.columns()
+	   << ",  Matrix 2 is " << B.rows() << " x " << B.columns() << endl;
       return Matrix(0,0);
     } else {
     
       // create new Mat for output, and do operation
-      Matrix C(A.Rows(),B.Columns());
-      for (size_t i=0; i<A.Rows(); i++) 
-	for (size_t j=0; j<B.Columns(); j++)
-	  for (size_t k=0; k<A.Columns(); k++)
-	    C.data[j][i] += A.data[k][i] * B.data[j][k];
+      Matrix C(A.rows(),B.columns());
+      for (Index i=0; i<A.rows(); i++) 
+	for (Index j=0; j<B.columns(); j++)
+	  for (Index k=0; k<A.columns(); k++)
+	    C._data[j][i] += A._data[k][i] * B._data[j][k];
       return C;
     }
   }
@@ -764,58 +800,58 @@ Matrix operator*(const Matrix& A, const Matrix& B) {
 
 
 // C = A*b
-Matrix operator*(const Matrix& A, const double b) {
-  Matrix C(A.Rows(),A.Columns());
-  for (size_t j=0; j<A.Columns(); j++)
-    for (size_t i=0; i<A.Rows(); i++)
-      C.data[j][i] = A.data[j][i] * b;
+Matrix operator*(const Matrix& A, const MathNumber b) {
+  Matrix C(A.rows(),A.columns());
+  for (Index j=0; j<A.columns(); j++)
+    for (Index i=0; i<A.rows(); i++)
+      C._data[j][i] = A._data[j][i] * b;
   return C;
 }
 
 // C = a*B
-Matrix operator*(const double a, const Matrix& B) {
-  Matrix C(B.Rows(),B.Columns());
-  for (size_t j=0; j<B.Columns(); j++)
-    for (size_t i=0; i<B.Rows(); i++)
-      C.data[j][i] = a * B.data[j][i];
+Matrix operator*(const MathNumber a, const Matrix& B) {
+  Matrix C(B.rows(),B.columns());
+  for (Index j=0; j<B.columns(); j++)
+    for (Index i=0; i<B.rows(); i++)
+      C._data[j][i] = a * B._data[j][i];
   return C;
 }
 
 // create a new matrix of linearly spaced data
-Matrix Linspace(double a, double b, size_t m, size_t n) {
+Matrix Linspace(MathNumber a, MathNumber b, Index m, Index n) {
   Matrix C(m,n);
-  double h = (b-a)/(m*n-1);
-  size_t idx=0;
-  for (size_t j=0; j<n; j++)
-    for (size_t i=0; i<m; i++)
-      C.data[j][i] = a + (idx++)*h;
+  MathNumber h = (b-a)/(m*n-1);
+  Index idx=0;
+  for (Index j=0; j<n; j++)
+    for (Index i=0; i<m; i++)
+      C._data[j][i] = a + (idx++)*h;
   return C;
 }
 
 // create a new column-vector matrix of logarithmically spaced data
-Matrix Logspace(double a, double b, size_t m, size_t n) {
+Matrix Logspace(MathNumber a, MathNumber b, Index m, Index n) {
   Matrix C(m,n);
-  double h = (b-a)/(m*n-1);
-  size_t idx=0;
-  for (size_t j=0; j<n; j++)
-    for (size_t i=0; i<m; i++)
-      C.data[j][i] = pow(10.0, a + (idx++)*h);
+  MathNumber h = (b-a)/(m*n-1);
+  Index idx=0;
+  for (Index j=0; j<n; j++)
+    for (Index i=0; i<m; i++)
+      C._data[j][i] = pow(10.0, a + (idx++)*h);
   return C;
 }
 
 // create a matrix with uniformly-distributed random numbers in [0,1]
-Matrix Random(size_t m, size_t n) {
+Matrix Random(Index m, Index n) {
   Matrix C(m,n);
-  for (size_t j=0; j<n; j++)
-    for (size_t i=0; i<m; i++)
-      C.data[j][i] = random() / (pow(2.0,31.0) - 1.0);
+  for (Index j=0; j<n; j++)
+    for (Index i=0; i<m; i++)
+      C._data[j][i] = random() / (pow(2.0,31.0) - 1.0);
   return C;
 }
 
 // create a new n by n identity matrix
-Matrix Eye(size_t n) {
+Matrix Eye(Index n) {
   Matrix I(n,n);
-  for (size_t i=0; i<n; i++)  I.data[i][i] = 1.0;
+  for (Index i=0; i<n; i++)  I._data[i][i] = 1.0;
   return I;
 }
 
@@ -823,37 +859,37 @@ Matrix Eye(size_t n) {
 Matrix MatrixRead(const char *infile) {
   
   // determine matrix size
-  size_t nrows=0, ncols=0;
+  Index _rows=0, _columns=0;
   ifstream ifs;
   string line;
   ifs.open(infile);
   while (getline(ifs, line)) {
     istringstream iss(line);   // convert line to stringstream
     float value;               // determine the number of columns on this row
-    size_t n=0;
+    Index n=0;
     while (iss >> value)  n++;
-    if ((n > 0) && (nrows == 0))  // first row, set ncols
-      ncols = n;
-    if ((n > 0) && (n != ncols)) {  // later row, with bad number of columns
+    if ((n > 0) && (_rows == 0))  // first row, set _columns
+      _columns = n;
+    if ((n > 0) && (n != _columns)) {  // later row, with bad number of columns
       cerr << "MatrixRead() error, not all rows in file " << infile 
 	   << " have the same number of cols, "
-	   << n << " != " << ncols << endl;
+	   << n << " != " << _columns << endl;
       return Matrix(0,0);
     }
-    if (n > 0) nrows++;          // legal row, increment counter
+    if (n > 0) _rows++;          // legal row, increment counter
   }
   ifs.close();
 
   // create matrix of desired size
-  Matrix A(nrows,ncols);
+  Matrix A(_rows,_columns);
 
   // load matrix based on data from file
   ifs.open(infile);   // reopen input file
-  for (size_t i=0; i<nrows; i++) {
+  for (Index i=0; i<_rows; i++) {
     getline( ifs, line ); 
     istringstream iss(line);   // convert line to stringstream
-    for (size_t j=0; j<ncols; j++) 
-      iss >> A.data[j][i];
+    for (Index j=0; j<_columns; j++) 
+      iss >> A._data[j][i];
   }
   ifs.close();
 
@@ -879,7 +915,7 @@ Matrix Inverse(const Matrix& A) {
 //--- supplementary matrix-vector arithmetic routines ---
 
 // write vector to a file
-int VecWrite(const vector<double>& v, const char *outfile) {
+int VecWrite(const MathVector& v, const char *outfile) {
 
   // return with failure if 'outfile' is empty
   if (strlen(outfile) < 1) {
@@ -896,7 +932,7 @@ int VecWrite(const vector<double>& v, const char *outfile) {
   }
 
   // print data to file
-  for (size_t i=0; i<v.size(); i++)
+  for (Index i=0; i<v.size(); i++)
     fprintf(fptr, "  %.16g", v[i]);
 
   // close output file and return
@@ -905,98 +941,98 @@ int VecWrite(const vector<double>& v, const char *outfile) {
 }
 
 // standard matrix-vector product
-vector<double> MatVec(const Matrix& A, const vector<double>& v) {
-  vector<double> res(A.Rows(), 0.0);
-  if (A.Columns() != v.size()) {
+MathVector MatVec(const Matrix& A, const MathVector& v) {
+  MathVector res(A.rows(), 0.0);
+  if (A.columns() != v.size()) {
     cerr << "MatVec: incompatible matrix/vector sizes in A*v\n";
   } else {
-    for (size_t i=0; i<A.Rows(); i++) 
-      for (size_t j=0; j<A.Columns(); j++)
+    for (Index i=0; i<A.rows(); i++) 
+      for (Index j=0; j<A.columns(); j++)
 	res[i] += A(i,j)*v[j];
   }
   return res;
 }
 
-vector<double> operator*(const Matrix& A, const vector<double>& v) {
+MathVector operator*(const Matrix& A, const MathVector& v) {
   return MatVec(A,v);
 }
 
 
-//--- supplementary vector<double> vector-arithmetic routines ---
+//--- supplementary MathVector vector-arithmetic routines ---
 
 // inner product between two vectors
-double Dot(const vector<double>& v1, const vector<double>& v2) {
+MathNumber Dot(const MathVector& v1, const MathVector& v2) {
   if (v1.size() != v2.size()) {
     cerr << "Dot: incompatible vector sizes\n";
     return 0.0;
   }
-  double res = 0.0;
-  for (size_t i=0; i<v2.size(); i++)  res += v1[i]*v2[i];
+  MathNumber res = 0.0;
+  for (Index i=0; i<v2.size(); i++)  res += v1[i]*v2[i];
   return res;
 }
 
 // vector 2-norm
-double Norm(const vector<double>& v) {
-  double sum=0.0;
-  for (size_t i=0; i<v.size(); i++)  sum += v[i]*v[i];
+MathNumber Norm(const MathVector& v) {
+  MathNumber sum=0.0;
+  for (Index i=0; i<v.size(); i++)  sum += v[i]*v[i];
   return sqrt(sum);
 }
 
 // vector infinity norm
-double InfNorm(const vector<double>& v) {
-  double mx=0.0;
-  for (size_t i=0; i<v.size(); i++)  
+MathNumber InfNorm(const MathVector& v) {
+  MathNumber mx=0.0;
+  for (Index i=0; i<v.size(); i++)  
     mx = std::max(mx,std::abs(v[i]));
   return mx;
 }
 
 // vector one-norm
-double OneNorm(const vector<double>& v) {
-  double sum=0.0;
-  for (size_t i=0; i<v.size(); i++)  sum += std::abs(v[i]);
+MathNumber OneNorm(const MathVector& v) {
+  MathNumber sum=0.0;
+  for (Index i=0; i<v.size(); i++)  sum += std::abs(v[i]);
   return sum;
 }
 
 // create a new vector of linearly spaced data
-vector<double> Linspace(double a, double b, size_t n) {
+MathVector Linspace(MathNumber a, MathNumber b, Index n) {
   if (n<2) cerr << "Linspace::length must be > 1\n";
-  vector<double> v(n);
-  double h = (b-a)/(n-1);
-  for (size_t i=0; i<n; i++)
+  MathVector v(n);
+  MathNumber h = (b-a)/(n-1);
+  for (Index i=0; i<n; i++)
     v[i] = a + i*h;
   return v;
 }
 
 // create a new vector of logarithmically spaced data
-vector<double> Logspace(double a, double b, size_t n) {
+MathVector Logspace(MathNumber a, MathNumber b, Index n) {
   if (n<2) cerr << "Logspace::length must be > 1\n";
-  vector<double> v(n);
-  double h = (b-a)/(n-1);
-  for (size_t i=0; i<n; i++)
+  MathVector v(n);
+  MathNumber h = (b-a)/(n-1);
+  for (Index i=0; i<n; i++)
     v[i] = pow(10.0, a + i*h);
   return v;
 }
 
 // create a new vector with uniformly-distributed random numbers in [0,1]
-vector<double> Random(size_t n) {
+MathVector Random(Index n) {
   if (n<1) cerr << "Random::length must be > 0\n";
-  vector<double> v(n);
-  for (size_t i=0; i<n; i++)
+  MathVector v(n);
+  for (Index i=0; i<n; i++)
     v[i] = random() / (pow(2.0,31.0) - 1.0);
   return v;
 }
 
 // streaming output routine
-ostream& operator<<(ostream& os, const vector<double>& v)
+ostream& operator<<(ostream& os, const MathVector& v)
 {
-  for (size_t i=0; i<v.size(); i++)
+  for (Index i=0; i<v.size(); i++)
     os << "  " << v[i];
   os << "\n";
   return os;
 }
 
 // extract routine for portions of vectors, y = x(is:ie)
-vector<double> VecExtract(vector<double>& x,
+MathVector VecExtract(MathVector& x,
                           long int is, long int ie) {
 
   // update is,ie,js,je if any are negative
@@ -1019,10 +1055,10 @@ vector<double> VecExtract(vector<double>& x,
   }
 
   // create new vector of desired size
-  vector<double> y(ie-is+1);
+  MathVector y(ie-is+1);
 
   // copy requested data
-  for (size_t i=is; i<=ie; i++) 
+  for (Index i=is; i<=ie; i++) 
     y[i-is] = x[i];
 
   // return object
@@ -1030,8 +1066,8 @@ vector<double> VecExtract(vector<double>& x,
 }
 
 // insert routine for portions of vectors, x(is:ie) = y
-int VecInsert(vector<double>& x, long int is,
-              long int ie, vector<double>& y) {
+int VecInsert(MathVector& x, long int is,
+              long int ie, MathVector& y) {
 
   // update is,ie if any are negative
   is = (is < 0) ? is+x.size() : is;
@@ -1062,7 +1098,7 @@ int VecInsert(vector<double>& x, long int is,
   }
   
   // perform operation
-  for (size_t i=0; i<y.size(); i++)  
+  for (Index i=0; i<y.size(); i++)  
     x[i+is] = y[i];
   
   // return success
@@ -1070,178 +1106,178 @@ int VecInsert(vector<double>& x, long int is,
 }
 
 // arithmetic operators
-vector<double>& operator+=(vector<double>& v, const double c) {
-  for (size_t i=0; i<v.size(); i++)
+MathVector& operator+=(MathVector& v, const MathNumber c) {
+  for (Index i=0; i<v.size(); i++)
     v[i] += c;
   return v;
 }
-vector<double>& operator+=(vector<double>& v, const vector<double>& w) {
+MathVector& operator+=(MathVector& v, const MathVector& w) {
   if (v.size() != w.size())
-    cerr << "vector<double> += error: incompatible vector sizes!";
+    cerr << "MathVector += error: incompatible vector sizes!";
   else
-    for (size_t i=0; i<v.size(); i++)
+    for (Index i=0; i<v.size(); i++)
       v[i] += w[i];
   return v;
 }
-vector<double>& operator-=(vector<double>& v, const double c) {
-  for (size_t i=0; i<v.size(); i++)
+MathVector& operator-=(MathVector& v, const MathNumber c) {
+  for (Index i=0; i<v.size(); i++)
     v[i] -= c;
   return v;
 }
-vector<double>& operator-=(vector<double>& v, const vector<double>& w) {
+MathVector& operator-=(MathVector& v, const MathVector& w) {
   if (v.size() != w.size())
-    cerr << "vector<double> -= error: incompatible vector sizes!";
+    cerr << "MathVector -= error: incompatible vector sizes!";
   else
-    for (size_t i=0; i<v.size(); i++)
+    for (Index i=0; i<v.size(); i++)
       v[i] -= w[i];
   return v;
 }
-vector<double>& operator*=(vector<double>& v, const double c) {
-  for (size_t i=0; i<v.size(); i++)
+MathVector& operator*=(MathVector& v, const MathNumber c) {
+  for (Index i=0; i<v.size(); i++)
     v[i] *= c;
   return v;
 }
-vector<double>& operator*=(vector<double>& v, const vector<double>& w) {
+MathVector& operator*=(MathVector& v, const MathVector& w) {
   if (v.size() != w.size())
-    cerr << "vector<double> *= error: incompatible vector sizes!";
+    cerr << "MathVector *= error: incompatible vector sizes!";
   else
-    for (size_t i=0; i<v.size(); i++)
+    for (Index i=0; i<v.size(); i++)
       v[i] *= w[i];
   return v;
 }
-vector<double>& operator/=(vector<double>& v, const double c) {
-  for (size_t i=0; i<v.size(); i++)
+MathVector& operator/=(MathVector& v, const MathNumber c) {
+  for (Index i=0; i<v.size(); i++)
     v[i] /= c;
   return v;
 }
-vector<double>& operator/=(vector<double>& v, const vector<double>& w) {
+MathVector& operator/=(MathVector& v, const MathVector& w) {
   if (v.size() != w.size())
-    cerr << "vector<double> /= error: incompatible vector sizes!";
+    cerr << "MathVector /= error: incompatible vector sizes!";
   else
-    for (size_t i=0; i<v.size(); i++)
+    for (Index i=0; i<v.size(); i++)
       v[i] /= w[i];
   return v;
 }
-vector<double>& operator^=(vector<double>& v, const double c) {
-  for (size_t i=0; i<v.size(); i++)
+MathVector& operator^=(MathVector& v, const MathNumber c) {
+  for (Index i=0; i<v.size(); i++)
     v[i] = pow(v[i], c);
   return v;
 }
-vector<double>& operator^=(vector<double>& v, const vector<double>& w) {
+MathVector& operator^=(MathVector& v, const MathVector& w) {
   if (v.size() != w.size())
-    cerr << "vector<double> /= error: incompatible vector sizes!";
+    cerr << "MathVector /= error: incompatible vector sizes!";
   else
-    for (size_t i=0; i<v.size(); i++)
+    for (Index i=0; i<v.size(); i++)
       v[i] = pow(v[i], w[i]);
   return v;
 }
-vector<double> operator+(const vector<double>& v, const double c) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator+(const MathVector& v, const MathNumber c) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] + c;
   return x;
 }
-vector<double> operator+(const double c, const vector<double>& v) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator+(const MathNumber c, const MathVector& v) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] + c;
   return x;
 }
-vector<double> operator+(const vector<double>& v, const vector<double>& w) {
+MathVector operator+(const MathVector& v, const MathVector& w) {
   if (v.size() != w.size()) {
-    cerr << "vector<double> + error: incompatible vector sizes!";
-    return vector<double>(0);
+    cerr << "MathVector + error: incompatible vector sizes!";
+    return MathVector(0);
   }
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] + w[i];
   return x;
 }
-vector<double> operator-(const vector<double>& v, const double c) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator-(const MathVector& v, const MathNumber c) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] - c;
   return x;
 }
-vector<double> operator-(const double c, const vector<double>& v) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator-(const MathNumber c, const MathVector& v) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = c - v[i];
   return x;
 }
-vector<double> operator-(const vector<double>& v, const vector<double>& w) {
+MathVector operator-(const MathVector& v, const MathVector& w) {
   if (v.size() != w.size()) {
-    cerr << "vector<double> - error: incompatible vector sizes!";
-    return vector<double>(0);
+    cerr << "MathVector - error: incompatible vector sizes!";
+    return MathVector(0);
   }
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] - w[i];
   return x;
 }
-vector<double> operator*(const vector<double>& v, const double c) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator*(const MathVector& v, const MathNumber c) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] * c;
   return x;
 }
-vector<double> operator*(const double c, const vector<double>& v) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator*(const MathNumber c, const MathVector& v) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] * c;
   return x;
 }
-vector<double> operator*(const vector<double>& v, const vector<double>& w) {
+MathVector operator*(const MathVector& v, const MathVector& w) {
   if (v.size() != w.size()) {
-    cerr << "vector<double> * error: incompatible vector sizes!";
-    return vector<double>(0);
+    cerr << "MathVector * error: incompatible vector sizes!";
+    return MathVector(0);
   }
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] * w[i];
   return x;
 }
-vector<double> operator/(const vector<double>& v, const double c) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator/(const MathVector& v, const MathNumber c) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] / c;
   return x;
 }
-vector<double> operator/(const double c, const vector<double>& v) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator/(const MathNumber c, const MathVector& v) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = c / v[i];
   return x;
 }
-vector<double> operator/(const vector<double>& v, const vector<double>& w) {
+MathVector operator/(const MathVector& v, const MathVector& w) {
   if (v.size() != w.size()) {
-    cerr << "vector<double> / error: incompatible vector sizes!";
-    return vector<double>(0);
+    cerr << "MathVector / error: incompatible vector sizes!";
+    return MathVector(0);
   }
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = v[i] / w[i];
   return x;
 }
-vector<double> operator^(const vector<double>& v, const double c) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator^(const MathVector& v, const MathNumber c) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = pow(v[i], c);
   return x;
 }
-vector<double> operator^(const double c, const vector<double>& v) {
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+MathVector operator^(const MathNumber c, const MathVector& v) {
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = pow(c, v[i]);
   return x;
 }
-vector<double> operator^(const vector<double>& v, const vector<double>& w) {
+MathVector operator^(const MathVector& v, const MathVector& w) {
   if (v.size() != w.size()) {
-    cerr << "vector<double> ^ error: incompatible vector sizes!";
-    return vector<double>(0);
+    cerr << "MathVector ^ error: incompatible vector sizes!";
+    return MathVector(0);
   }
-  vector<double> x(v.size());
-  for (size_t i=0; i<v.size(); i++)
+  MathVector x(v.size());
+  for (Index i=0; i<v.size(); i++)
     x[i] = pow(v[i], w[i]);
   return x;
 }
@@ -1253,12 +1289,12 @@ vector<double> operator^(const vector<double>& v, const vector<double>& w) {
 int BackSubstitution(const Matrix& U, Matrix& X, const Matrix& B) {
 
   // check that matrix sizes match
-  if (U.Rows() != B.Rows() || U.Rows() != U.Columns() || 
-      B.Columns() != X.Columns() || X.Rows() != U.Rows()) {
+  if (U.rows() != B.rows() || U.rows() != U.columns() || 
+      B.columns() != X.columns() || X.rows() != U.rows()) {
     cerr << "BackSubstitution error, incompatible matrix/vector dimensions\n";
-    cerr << "  Matrix is " << U.Rows() << " x " << U.Columns() 
-	 << ",  rhs is " << B.Rows() << " x " << B.Columns()
-	 << ",  solution is " << X.Rows() << " x " << X.Columns() << endl;
+    cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
+	 << ",  rhs is " << B.rows() << " x " << B.columns()
+	 << ",  solution is " << X.rows() << " x " << X.columns() << endl;
     return 1;
   }
   
@@ -1266,25 +1302,25 @@ int BackSubstitution(const Matrix& U, Matrix& X, const Matrix& B) {
   X.Copy(B);
 
   // analyze matrix for magnitude
-  double Umax = InfNorm(U);
+  MathNumber Umax = InfNorm(U);
 
   // perform column-oriented Backward Substitution algorithm
-  for (long int j=U.Rows()-1; j>=0; j--) {
+  for (long int j=U.rows()-1; j>=0; j--) {
 
     // check for nonzero matrix diagonal
-    if (fabs(U.data[j][j]) < STOL*Umax) {
+    if (fabs(U._data[j][j]) < STOL*Umax) {
       cerr << "BackSubstitution error: numerically singular matrix!\n";
       return 1;
     }
 
     // solve for this row of solution
-    for (long int k=0; k<X.Columns(); k++) 
-      X.data[k][j] /= U.data[j][j];
+    for (long int k=0; k<X.columns(); k++) 
+      X._data[k][j] /= U._data[j][j];
 
     // update all remaining rhs
-    for (long int k=0; k<X.Columns(); k++)
+    for (long int k=0; k<X.columns(); k++)
       for (long int i=0; i<j; i++)
-	X.data[k][i] -= U.data[j][i]*X.data[k][j];
+	X._data[k][i] -= U._data[j][i]*X._data[k][j];
 
   }
 
@@ -1297,27 +1333,27 @@ int BackSubstitution(const Matrix& U, Matrix& X, const Matrix& B) {
 Matrix BackSubstitution(const Matrix& U, const Matrix& B) {
 
   // check that matrix sizes match
-  if (U.Rows() != B.Rows() || U.Rows() != U.Columns()) {
+  if (U.rows() != B.rows() || U.rows() != U.columns()) {
     cerr << "BackSubstitution error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << U.Rows() << " x " << U.Columns() 
-	 << ",  rhs is " << B.Rows() << " x " << B.Columns() << endl;
+    cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
+	 << ",  rhs is " << B.rows() << " x " << B.columns() << endl;
     return Matrix(0,0);
   } else {
     // create new Matrix for output and call existing BackSubstitution routine
-    Matrix X(U.Rows(),B.Columns());
+    Matrix X(U.rows(),B.columns());
     if (BackSubstitution(U, X, B) != 0)
       cerr << "BackSubstitution Warning: error in BackSubstitution call\n";
     return X;
   }
 }
 
-// backward substitution on U*x = b, filling in an existing vector<double> x
-int BackSubstitution(const Matrix& U, vector<double>& x, const vector<double>& b) {
+// backward substitution on U*x = b, filling in an existing MathVector x
+int BackSubstitution(const Matrix& U, MathVector& x, const MathVector& b) {
 
   // check that matrix sizes match
-  if (U.Rows() != b.size() || U.Rows() != U.Columns() || x.size() != U.Rows()) {
+  if (U.rows() != b.size() || U.rows() != U.columns() || x.size() != U.rows()) {
     cerr << "BackSubstitution error, incompatible matrix/vector dimensions\n";
-    cerr << "  Matrix is " << U.Rows() << " x " << U.Columns() 
+    cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
 	 << ",  rhs is " << b.size() << " x 1"
 	 << ",  solution is " << x.size() << " x 1\n";
     return 1;
@@ -1327,23 +1363,23 @@ int BackSubstitution(const Matrix& U, vector<double>& x, const vector<double>& b
   x = b;
 
   // analyze matrix for magnitude
-  double Umax = InfNorm(U);
+  MathNumber Umax = InfNorm(U);
 
   // perform column-oriented Backward Substitution algorithm
-  for (long int j=U.Rows()-1; j>=0; j--) {
+  for (long int j=U.rows()-1; j>=0; j--) {
 
     // check for nonzero matrix diagonal
-    if (fabs(U.data[j][j]) < STOL*Umax) {
+    if (fabs(U._data[j][j]) < STOL*Umax) {
       cerr << "BackSubstitution error: numerically singular matrix!\n";
       return 1;
     }
 
     // solve for this row of solution
-    x[j] /= U.data[j][j];
+    x[j] /= U._data[j][j];
 
     // update all remaining rhs
     for (long int i=0; i<j; i++)
-      x[i] -= U.data[j][i]*x[j];
+      x[i] -= U._data[j][i]*x[j];
 
   }
 
@@ -1351,18 +1387,18 @@ int BackSubstitution(const Matrix& U, vector<double>& x, const vector<double>& b
   return 0;
 }
 
-// backward substitution on U*x = b, returning x as a new vector<double>
+// backward substitution on U*x = b, returning x as a new MathVector
 //    U and b remain unchanged in this operation
-vector<double> BackSubstitution(const Matrix& U, const vector<double>& b) {
-  if (U.Rows() != b.size() || U.Rows() != U.Columns()) {
+MathVector BackSubstitution(const Matrix& U, const MathVector& b) {
+  if (U.rows() != b.size() || U.rows() != U.columns()) {
     cerr << "BackSubstitution error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << U.Rows() << " x " << U.Columns() 
+    cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
 	 << ",  rhs is " << b.size() << " x 1\n";
-    return vector<double>(0);
+    return MathVector(0);
   }
 
   // create output vector, call existing BackSubstitution routine, and return
-  vector<double> x(0.0, U.Columns());
+  MathVector x(0.0, U.columns());
   if (BackSubstitution(U, x, b) != 0)
     cerr << "BackSubstitution Warning: error in BackSubstitution call\n";
   return x;
@@ -1374,12 +1410,12 @@ vector<double> BackSubstitution(const Matrix& U, const vector<double>& b) {
 int ForwardSubstitution(const Matrix& L, Matrix& X, const Matrix& B) {
 
   // check that matrix sizes match
-  if (L.Rows() != B.Rows() || L.Rows() != L.Columns() || 
-      B.Columns() != X.Columns() || X.Rows() != L.Rows()) {
+  if (L.rows() != B.rows() || L.rows() != L.columns() || 
+      B.columns() != X.columns() || X.rows() != L.rows()) {
     cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << L.Rows() << " x " << L.Columns() 
-	 << ",  rhs is " << B.Rows() << " x " << B.Columns()
-	 << ",  solution is " << X.Rows() << " x " << X.Columns() << endl;
+    cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
+	 << ",  rhs is " << B.rows() << " x " << B.columns()
+	 << ",  solution is " << X.rows() << " x " << X.columns() << endl;
     return 1;
   }
   
@@ -1387,25 +1423,25 @@ int ForwardSubstitution(const Matrix& L, Matrix& X, const Matrix& B) {
   X.Copy(B);
 
   // analyze matrix magnitude
-  double Lmax = InfNorm(L);
+  MathNumber Lmax = InfNorm(L);
 
   // perform column-oriented Forwards Substitution algorithm
-  for (long int j=0; j<L.Rows(); j++) {
+  for (long int j=0; j<L.rows(); j++) {
 
     // check for nonzero matrix diagonal
-    if (fabs(L.data[j][j]) < STOL*Lmax) {
+    if (fabs(L._data[j][j]) < STOL*Lmax) {
       cerr << "ForwardSubstitution error: singular matrix!\n";
       return 1;
     }
 
     // solve for this row of solution
-    for (long int k=0; k<X.Columns(); k++)
-      X.data[k][j] /= L.data[j][j];
+    for (long int k=0; k<X.columns(); k++)
+      X._data[k][j] /= L._data[j][j];
 
     // update all remaining rhs
-    for (long int k=0; k<X.Columns(); k++)
-      for (long int i=j+1; i<L.Rows(); i++)
-	X.data[k][i] -= L.data[j][i]*X.data[k][j];
+    for (long int k=0; k<X.columns(); k++)
+      for (long int i=j+1; i<L.rows(); i++)
+	X._data[k][i] -= L._data[j][i]*X._data[k][j];
 
   }
 
@@ -1418,29 +1454,29 @@ int ForwardSubstitution(const Matrix& L, Matrix& X, const Matrix& B) {
 Matrix ForwardSubstitution(const Matrix& L, const Matrix& B) {
 
   // check that matrix sizes match
-  if (L.Rows() != B.Rows() || L.Rows() != L.Columns()) {
+  if (L.rows() != B.rows() || L.rows() != L.columns()) {
     cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << L.Rows() << " x " << L.Columns() 
-	 << ",  rhs is " << B.Rows() << " x " << B.Columns() << endl;
+    cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
+	 << ",  rhs is " << B.rows() << " x " << B.columns() << endl;
     return Matrix(0,0);
   } else {
     // create new Matrix for output and call existing BackSubstitution routine
-    Matrix X(L.Rows(),B.Columns());
+    Matrix X(L.rows(),B.columns());
     if (ForwardSubstitution(L, X, B) != 0)
       cerr << "ForwardSubstitution Warning: error in ForwardSubstitution call\n";
     return X;
   }
 }
 
-// forward substitution on L*x = b, filling in an existing vector<double) x
+// forward substitution on L*x = b, filling in an existing vector<MathNumber) x
 //    L and b remain unchanged in this operation; x holds the result
-int ForwardSubstitution(const Matrix& L, vector<double>& x, const vector<double>& b) {
+int ForwardSubstitution(const Matrix& L, MathVector& x, const MathVector& b) {
 
   // check that matrix sizes match
-  if (L.Rows() != b.size() || L.Rows() != L.Columns() || 
-      x.size() != L.Rows()) {
+  if (L.rows() != b.size() || L.rows() != L.columns() || 
+      x.size() != L.rows()) {
     cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << L.Rows() << " x " << L.Columns() 
+    cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
 	 << ",  rhs is " << b.size() << " x 1"
 	 << ",  solution is " << x.size() << " x 1\n";
     return 1;
@@ -1450,23 +1486,23 @@ int ForwardSubstitution(const Matrix& L, vector<double>& x, const vector<double>
   x = b;
 
   // analyze matrix for magnitude
-  double Lmax = InfNorm(L);
+  MathNumber Lmax = InfNorm(L);
 
   // perform column-oriented Forwards Substitution algorithm
-  for (long int j=0; j<L.Rows(); j++) {
+  for (long int j=0; j<L.rows(); j++) {
 
     // check for nonzero matrix diagonal
-    if (fabs(L.data[j][j]) < STOL*Lmax) {
+    if (fabs(L._data[j][j]) < STOL*Lmax) {
       cerr << "ForwardSubstitution error: singular matrix!\n";
       return 1;
     }
 
     // solve for this row of solution
-    x[j] /= L.data[j][j];
+    x[j] /= L._data[j][j];
 
     // update all remaining rhs
-    for (long int i=j+1; i<L.Rows(); i++)
-      x[i] -= L.data[j][i]*x[j];
+    for (long int i=j+1; i<L.rows(); i++)
+      x[i] -= L._data[j][i]*x[j];
 
   }
 
@@ -1474,19 +1510,19 @@ int ForwardSubstitution(const Matrix& L, vector<double>& x, const vector<double>
   return 0;
 }
 
-// forward substitution on L*x = b, returning x as a new vector<double>
+// forward substitution on L*x = b, returning x as a new MathVector
 //    L and b remain unchanged in this operation
-vector<double> ForwardSubstitution(const Matrix& L, const vector<double>& b) {
+MathVector ForwardSubstitution(const Matrix& L, const MathVector& b) {
   // check that matrix sizes match
-  if (L.Rows() != b.size() || L.Rows() != L.Columns()) {
+  if (L.rows() != b.size() || L.rows() != L.columns()) {
     cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << L.Rows() << " x " << L.Columns() 
+    cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
 	 << ",  rhs is " << b.size() << " x 1\n";
-    return vector<double>(0);
+    return MathVector(0);
   }
 
   // create output vector and return
-  vector<double> x(0.0, L.Columns());
+  MathVector x(0.0, L.columns());
   if (ForwardSubstitution(L, x, b) != 0)
     cerr << "ForwardSubstitution Warning: error in ForwardSubstitution call\n";
   return x;
@@ -1496,58 +1532,58 @@ vector<double> ForwardSubstitution(const Matrix& L, const vector<double>& b) {
 int LinearSolve(Matrix& A, Matrix& X, Matrix& B) {
 
   // check that matrix sizes match
-  if (A.Rows() != B.Rows() || A.Rows() != A.Columns() ||
-      B.Columns() != X.Columns() || X.Rows() != A.Rows()) {
+  if (A.rows() != B.rows() || A.rows() != A.columns() ||
+      B.columns() != X.columns() || X.rows() != A.rows()) {
     cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << A.Rows() << " x " << A.Columns() 
-	 << ",  rhs is " << B.Rows() << " x " << B.Columns()
-	 << ",  solution is " << X.Rows() << " x " << X.Columns() << endl;
+    cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
+	 << ",  rhs is " << B.rows() << " x " << B.columns()
+	 << ",  solution is " << X.rows() << " x " << X.columns() << endl;
     return 1;
   }
   
   // create temporary variables
   long int i, j, k, p;
-  double Amax;
+  MathNumber Amax;
 
   // determine magnitude of entries in A (for singularity check later)
   Amax = InfNorm(A);
 
   // perform Gaussian elimination to convert A,B to an upper-triangular system
-  for (k=0; k<A.Rows()-1; k++) {   // loop over diagonals
+  for (k=0; k<A.rows()-1; k++) {   // loop over diagonals
 
     // find the pivot row p
     p=k;
-    for (i=k; i<A.Rows(); i++)  
-      if (fabs(A.data[k][i]) > std::abs(A.data[k][p]))
+    for (i=k; i<A.rows(); i++)  
+      if (fabs(A._data[k][i]) > std::abs(A._data[k][p]))
 	p=i;
 
     // swap rows in A
-    for (j=k; j<A.Rows(); j++) 
-      std::swap(A.data[j][p], A.data[j][k]);
+    for (j=k; j<A.rows(); j++) 
+      std::swap(A._data[j][p], A._data[j][k]);
 
     // swap rows in B
-    for (j=0; j<B.Columns(); j++)
-      std::swap(B.data[j][p], B.data[j][k]);
+    for (j=0; j<B.columns(); j++)
+      std::swap(B._data[j][p], B._data[j][k]);
 		
     // check for nonzero matrix diagonal
-    if (fabs(A.data[k][k]) < STOL*Amax) {
+    if (fabs(A._data[k][k]) < STOL*Amax) {
       cerr << "LinearSolve error: numerically singular matrix!\n";
       return 1;
     }
 
     // perform elimination using row k
-    for (i=k+1; i<A.Rows(); i++)      // store multipliers in column below pivot
-      A.data[k][i] /= A.data[k][k];
-    for (j=k+1; j<A.Rows(); j++)      // loop over columns of A, to right of pivot 
-      for (i=k+1; i<A.Rows(); i++)    // update rows in column
-	A.data[j][i] -= A.data[k][i]*A.data[j][k];
-    for (j=0; j<B.Columns(); j++)
-      for (i=k+1; i<A.Rows(); i++)      // update entries in B
-	B.data[j][i] -= A.data[k][i]*B.data[j][k];
+    for (i=k+1; i<A.rows(); i++)      // store multipliers in column below pivot
+      A._data[k][i] /= A._data[k][k];
+    for (j=k+1; j<A.rows(); j++)      // loop over columns of A, to right of pivot 
+      for (i=k+1; i<A.rows(); i++)    // update rows in column
+	A._data[j][i] -= A._data[k][i]*A._data[j][k];
+    for (j=0; j<B.columns(); j++)
+      for (i=k+1; i<A.rows(); i++)      // update entries in B
+	B._data[j][i] -= A._data[k][i]*B._data[j][k];
   }
 
   // check for singularity at end (only need to check final diagonal entry)
-  if (fabs(A.data[A.Rows()-1][A.Rows()-1]) < STOL*Amax) {
+  if (fabs(A._data[A.rows()-1][A.rows()-1]) < STOL*Amax) {
     cerr << "LinearSolve error: numerically singular matrix!\n";
     return 1;
   }
@@ -1566,29 +1602,29 @@ int LinearSolve(Matrix& A, Matrix& X, Matrix& B) {
 Matrix LinearSolve(Matrix& A, Matrix& B) {
 
   // check that matrix sizes match
-  if (A.Rows() != B.Rows() || A.Rows() != A.Columns()) {
+  if (A.rows() != B.rows() || A.rows() != A.columns()) {
     cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << A.Rows() << " x " << A.Columns() 
-	 << ",  rhs is " << B.Rows() << " x " << B.Columns() << endl;
+    cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
+	 << ",  rhs is " << B.rows() << " x " << B.columns() << endl;
     return Matrix(0,0);
   } else {
     // create new Mat for output, and call existing LinearSolve routine
-    Matrix X(A.Rows(),B.Columns());
+    Matrix X(A.rows(),B.columns());
     if (LinearSolve(A, X, B) != 0)
       cerr << "LinearSolve: error in in-place LinearSolve call\n";
     return X;
   }
 }
 
-// solves a linear system A*x = b, filling in the input vector<double> x
+// solves a linear system A*x = b, filling in the input MathVector x
 //    A and b are modified in this operation; x holds the result
-int LinearSolve(Matrix& A, vector<double>& x, vector<double>& b) {
+int LinearSolve(Matrix& A, MathVector& x, MathVector& b) {
 
   // check that matrix sizes match
-  if (A.Rows() != b.size() || A.Rows() != A.Columns() ||
-      x.size() != A.Columns()) {
+  if (A.rows() != b.size() || A.rows() != A.columns() ||
+      x.size() != A.columns()) {
     cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << A.Rows() << " x " << A.Columns() 
+    cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
 	 << ",  rhs is " << b.size() << " x 1"
 	 << ",  solution is " << x.size() << " x 1\n";
     return 1;
@@ -1596,45 +1632,45 @@ int LinearSolve(Matrix& A, vector<double>& x, vector<double>& b) {
   
   // create temporary variables
   long int i, j, k, p;
-  double Amax;
+  MathNumber Amax;
 
   // determine magnitude of entries in A (for singularity check later)
   Amax = InfNorm(A);
 
   // perform Gaussian elimination to convert A,B to an upper-triangular system
-  for (k=0; k<A.Rows()-1; k++) {   // loop over diagonals
+  for (k=0; k<A.rows()-1; k++) {   // loop over diagonals
 
     // find the pivot row p
     p=k;
-    for (i=k; i<A.Rows(); i++)  
-      if (fabs(A.data[k][i]) > fabs(A.data[k][p]))
+    for (i=k; i<A.rows(); i++)  
+      if (fabs(A._data[k][i]) > fabs(A._data[k][p]))
 	p=i;
 
     // swap rows in A
-    for (j=k; j<A.Rows(); j++) 
-      std::swap(A.data[j][p], A.data[j][k]);
+    for (j=k; j<A.rows(); j++) 
+      std::swap(A._data[j][p], A._data[j][k]);
 
     // swap rows in b
     std::swap(b[p], b[k]);
 		
     // check for nonzero matrix diagonal
-    if (fabs(A.data[k][k]) < STOL*Amax) {
+    if (fabs(A._data[k][k]) < STOL*Amax) {
       cerr << "LinearSolve error: numerically singular matrix!\n";
       return 1;
     }
 
     // perform elimination using row k
-    for (i=k+1; i<A.Rows(); i++)      // store multipliers in column below pivot
-      A.data[k][i] /= A.data[k][k];
-    for (j=k+1; j<A.Rows(); j++)      // loop over columns of A, to right of pivot 
-      for (i=k+1; i<A.Rows(); i++)    // update rows in column
-	A.data[j][i] -= A.data[k][i]*A.data[j][k];
-    for (i=k+1; i<A.Rows(); i++)      // update entries in b
-      b[i] -= A.data[k][i]*b[k];
+    for (i=k+1; i<A.rows(); i++)      // store multipliers in column below pivot
+      A._data[k][i] /= A._data[k][k];
+    for (j=k+1; j<A.rows(); j++)      // loop over columns of A, to right of pivot 
+      for (i=k+1; i<A.rows(); i++)    // update rows in column
+	A._data[j][i] -= A._data[k][i]*A._data[j][k];
+    for (i=k+1; i<A.rows(); i++)      // update entries in b
+      b[i] -= A._data[k][i]*b[k];
   }
 
   // check for singularity at end (only need to check final diagonal entry)
-  if (fabs(A.data[A.Rows()-1][A.Rows()-1]) < STOL*Amax) {
+  if (fabs(A._data[A.rows()-1][A.rows()-1]) < STOL*Amax) {
     cerr << "LinearSolve error: numerically singular matrix!\n";
     return 1;
   }
@@ -1649,20 +1685,20 @@ int LinearSolve(Matrix& A, vector<double>& x, vector<double>& b) {
   return 0;
 }
 
-// solves a linear system A*x = b, returning x as a new vector<double>
+// solves a linear system A*x = b, returning x as a new MathVector
 //    A and b are modified in this operation; x holds the result
-vector<double> LinearSolve(Matrix& A, vector<double>& b) {
+MathVector LinearSolve(Matrix& A, MathVector& b) {
 
   // check that matrix sizes match
-  if (A.Rows() != b.size() || A.Rows() != A.Columns()) {
+  if (A.rows() != b.size() || A.rows() != A.columns()) {
     cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-    cerr << "  Matrix is " << A.Rows() << " x " << A.Columns() 
+    cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
 	 << ",  rhs is " << b.size() << " x 1\n";
-    return vector<double>(0);
+    return MathVector(0);
   }
 
   // create output, call existing LinearSolve routine and return
-  vector<double> x = b;
+  MathVector x = b;
   if (LinearSolve(A, x, b) != 0)
     cerr << "LinearSolve: error in in-place LinearSolve call\n";
   return x;

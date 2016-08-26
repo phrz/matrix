@@ -8,7 +8,9 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include "matrix.h"
+
+#include "Matrix.h"
+
 using namespace std;
 
 // prototypes of other functions
@@ -18,51 +20,54 @@ int GramSchmidt(Matrix& X);
 // Example routine to test the Mat class
 int main(int argc, char* argv[]) {
 
-  // create a row vector of length 5
-  Matrix a(1,5);
+	// create a row vector of length 5
+	Matrix a(1,5);
 
-  // create a row vec with an existing data array
-  double dat1[5] = {0.1, 0.2, 0.3, 0.4, 0.5};
-  Matrix b(1, 5, dat1);
+	// create a row vec with an existing data array
+	double dat1[5] = {0.1, 0.2, 0.3, 0.4, 0.5};
+	Matrix b(1, 5, dat1);
 
-  // create a column vec with an existing vector
-  vector<double> dat2 = {0.1, 0.2, 0.3, 0.4, 0.5};
-  Matrix b2(5, 1, dat2);
+	// create a column vec with an existing vector
+	vector<double> dat2 = {0.1, 0.2, 0.3, 0.4, 0.5};
+	Matrix b2(5, 1, dat2);
 
-  // create a row vector using linspace
-  Matrix c = Linspace(1.0, 5.0, 1, 5);
+	// create a row vector using linspace
+	Matrix c = Linspace(1.0, 5.0, 1, 5);
 
-  // create a column vector using the single integer constructor
-  Matrix h(7);
+	// create a column vector using the single integer constructor
+	Matrix h(7);
 
-  // output vectors above to screen
-  printf("writing array of zeros:\n");
-  a.Write();
-  printf("writing array of 0.1,0.2,0.3,0.4,0.5:\n");
-  b.Write();
-  printf("writing (column) array of 0.1,0.2,0.3,0.4,0.5:\n");
-  b2.Write();
-  printf("writing array of 1,2,3,4,5:\n");
-  c.Write();
-  printf("writing a column vector of 7 zeros:\n");
-  h.Write();
+	// output vectors above to screen
+	printf("writing array of zeros:\n");
+	a.Write();
+	printf("writing array of 0.1,0.2,0.3,0.4,0.5:\n");
+	b.Write();
+	printf("writing (column) array of 0.1,0.2,0.3,0.4,0.5:\n");
+	b2.Write();
+	printf("writing array of 1,2,3,4,5:\n");
+	c.Write();
+	printf("writing a column vector of 7 zeros:\n");
+	h.Write();
 
-  // verify that b has size 5
-  if (b.Rows()*b.Columns() != 5) 
-    printf("error: incorrect matrix size\n");
-  if (b.Size() != 5) 
-    printf("error: incorrect matrix size\n");
+	// verify that b has size 5
+	if (b.rows()*b.columns() != 5) {
+		printf("error: incorrect matrix size\n");
+	}
+	if (b.size() != 5) {
+		printf("error: incorrect matrix size\n");
+	}
 
-  // edit entries of a in both matrix forms, and write each entry of a to screen
-  a(0,0)  = 10.0;
-  a(0,1)  = 15.0;
-  a[2][0] = 20.0;
-  a[3][0] = 25.0;
-  a[4][0] = 30.0;
-  printf("entries of a, one at a time: should give 10, 15, 20, 25, 30\n");
-  for (size_t i=0; i<a.Columns(); i++) 
-    printf("  %g\n",a(i));
-  
+	// edit entries of a in both matrix forms, and write each entry of a to screen
+	a(0,0) = 10.0;
+	a(0,1) = 15.0;
+	a(2,0) = 20.0;
+	a(3,0) = 25.0;
+	a(4,0) = 30.0;
+	printf("entries of a, one at a time: should give 10, 15, 20, 25, 30\n");
+	for (size_t i=0; i<a.columns(); i++) {
+		printf("  %g\n",a(i));
+	}
+	
   // write the values to file
   printf("writing this same vector to the file 'a_data':\n");
   a.Write("a_data");
@@ -277,12 +282,12 @@ int main(int argc, char* argv[]) {
     Y(i,4) = -20.0 + 1.0*i;
   }
 
-  // extract columns from matrix (both ways)
-  vector<double> Y0 = Y.Column(0);
-  Matrix Y1(10, 1, Y.Column(1));
-  Matrix Y2(10, 1, Y[2]);
-  vector<double> Y3 = Y[3];
-  vector<double> Y4 = Y[4];
+  // extract columns from matrix
+  vector<double> Y0 = Y.column(0);
+  Matrix Y1(10, 1, Y.column(1));
+  Matrix Y2(10, 1, Y.column(2));
+  vector<double> Y3 = Y.column(3);
+  vector<double> Y4 = Y.column(4);
 
   // check the LinearSum routine
   Y4 += Y3;
@@ -321,9 +326,9 @@ int main(int argc, char* argv[]) {
   printf("Testing GramSchmidt, should work\n");
   Matrix X = Random(20,3);
   int iret = GramSchmidt(X);
-  vector<double> X0 = X.Column(0);
-  vector<double> X1 = X.Column(1);
-  vector<double> X2 = X.Column(2);
+  vector<double> X0 = X.column(0);
+  vector<double> X1 = X.column(1);
+  vector<double> X2 = X.column(2);
   printf("  GramSchmidt returned %i, dot-products are:\n",iret);
   printf("     <X0,X0> = %g\n", Dot(X0,X0));
   printf("     <X0,X1> = %g\n", Dot(X0,X1));
@@ -334,11 +339,11 @@ int main(int argc, char* argv[]) {
   
   printf("Testing GramSchmidt, should fail\n");
   Matrix V = Random(20,3);
-  V[2] = V[1];
+  V.column(2) = V.column(1);
   iret = GramSchmidt(V);
-  Matrix V0(20,1,V[0]);
-  Matrix V1(20,1,V[1]);
-  Matrix V2(20,1,V[2]);
+  Matrix V0(20,1,V.column(0));
+  Matrix V1(20,1,V.column(1));
+  Matrix V2(20,1,V.column(2));
   printf("  GramSchmidt returned %i, dot-products are:\n",iret);
   printf("     <V0,V0> = %g\n", Dot(V0,V0));
   printf("     <V0,V1> = %g\n", Dot(V0,V1));

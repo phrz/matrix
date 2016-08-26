@@ -1,17 +1,31 @@
-/* Daniel R. Reynolds
-   SMU Mathematics
-   19 June 2015
-
-   This file defines the Matrix class, as well a variety of linear 
-   algebra functions defined based on matrices and vectors.  Here, 
-   "vectors" are considered as std::vector<double> objects. */
+/**
+ * @file Matrix.h
+ * @brief defines a Matrix class and linear algebra functions.
+ *
+ * This is an adaptation of Dr. Daniel Reynold's
+ * original work, a C++ Matrix class, with modifications
+ * for broader compatibility, API consistency,
+ * and documentation.
+ *
+ * The repository for the original work can be found here:
+ * [drreynolds/matrix](https://bitbucket.org/drreynolds/matrix) (bitbucket)
+ *
+ * This file defines the Matrix class, as well a variety of linear
+ * algebra functions defined based on matrices and vectors.  Here,
+ * "vectors" are considered as MathVector objects.
+ *
+ * @author Daniel R. Reynolds (drreynolds)
+ * @date 2015-06-19
+ *
+ * @author Paul Herz
+ * @date 2016-08-26
+ */
 
 #ifndef MATRIX_DEFINED__
 #define MATRIX_DEFINED__
 
 // Inclusions
 #include <iostream>
-#include <ostream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -25,95 +39,232 @@
 #include <cmath>
 #endif
 
+using  MathNumber = double;
+using  MathVector = std::vector<MathNumber>;
+using Math2DArray = std::vector<MathVector>;
+using       Index = std::size_t;
 
-//-------------------------------------------------------------
-
-// Arithmetic matrix class
+/**
+ * @class Matrix
+ * @brief an arithmetic matrix class.
+ *
+ * This class wraps a Math2DArray, alias for std::vector<MathVector>
+ *
+ */
 class Matrix {
-
+private:
+	
+	/// Row count
+	Index _rows;
+	
+	/// Column count
+	Index _columns;
+	
 public:
+	
+	/**
+	 * @brief raw matrix data
+	 * stored by column.
+	 * public for the sake of operator manipulation.
+	 */
+	Math2DArray _data;
 
-  // components
-  size_t nrows;
-  size_t ncols;
-  std::vector< std::vector<double> > data;       // matrix data (stored by column)
+	/** @defgroup Constructors
+		@{
+	 */
+	#pragma mark Constructors
+	
+	/// Default constructor for an empty matrix
+	Matrix() : _rows(0), _columns(0) {};
+	
+	/// Size constructor (zero-fills matrix)
+	Matrix(Index m, Index n);
+	
+	/// Column vector constructor (zero-fills vector)
+	Matrix(Index m);
+	
+	/// Array wrap constructor for double* array
+	Matrix(Index m, Index n, MathNumber* vals);
+	
+	/// Array wrap constructor for MathVector array
+	Matrix(Index m, Index n, MathVector vals);
+	
+	/// Column vector constructor from MathVector array
+	Matrix(MathVector vals);
+	
+	/// Matrix constructor from Math2DArray
+	Matrix(Math2DArray vals);
+	
+	/// String-based matrix constructor, uses commas and semicolon delimiters.
+	Matrix(std::string mat_spec);
+	
+	/// Copy constructor
+	Matrix(const Matrix& A);
+	
+	/// Copy assignment operator
+	Matrix& operator=(const Matrix& A);
+	
+	/// Move constructor
+	Matrix(Matrix&& A);
+	
+	/// Move assignment operator
+	Matrix& operator=(Matrix&& A);
+	/// @}
+	// end of Constructors
+	
+	
+	/** @defgroup Dimension Accessors
+		@{
+	 */
+	#pragma mark Dimension Accessors
+	
+	Index const size() const { return _rows * _columns; }
+	Index const& rows() const { return _rows; }
+	Index const& columns() const { return _columns; }
+	/// @}
+	// end of Dimension Accessors
 
-  // constructors
-  Matrix() : nrows(0), ncols(0) {};              // default constructor (empty)
-  Matrix(size_t m, size_t n);                    // general constructor (initializes values to 0.0)
-  Matrix(size_t m);                              // column-vector constructor (initializes values to 0.0)
-  Matrix(size_t m, size_t n, double* vals);      // constructors that copy input data
-  Matrix(size_t m, size_t n, std::vector<double> vals);
-  Matrix(std::vector<double> vals);
-  Matrix(std::vector< std::vector<double> > vals);
-  Matrix(std::string mat_spec);                  // string-based matrix constructor
-  Matrix(const Matrix& A);                       // copy constructors
-  Matrix& operator=(const Matrix& A);
+	
+	/** @defgroup Row or Column Accessors
+		@{
+	 */
+	#pragma mark Row or Column Accessors
+	
+	MathVector& column(Index i);
+	MathVector row(Index i);
+	/// @}
+	// end of Row or Column Accessors
+	
+	
+	/** @defgroup Cell accessors
+	    MATLAB/Fortran-style accessors 
+		e.g. `M(row,column)` and `M(linearIndex)`
+		@{
+	 */
+	#pragma mark Cell accessors
+	double& operator()(Index row, Index column);
+	double operator()(Index row, Index column) const;
+	double& operator()(Index linearIndex);
+	double operator()(Index linearIndex) const;
+	/// @}
+	// end of Cell accessors
+	
 
-  // dimension accessor routines
-  size_t Size() const;
-  size_t Columns() const;
-  size_t Rows() const;
+	/** @defgroup Output routines
+		@{
+	 */
+	#pragma mark Output routines
+	/// write to stdout
+	int Write() const;
+	
+	/// write to file
+	int Write(const char *outfile) const;
+	
+	/// streaming output (cout << M)
+	friend std::ostream& operator<<(std::ostream& os, const Matrix& A);
+	/// @}
+	// end of Output routines
+	
+	
+	/** @defgroup In-place operations
+		C is the matrix calling the routine, i.e. C = A*X is C.Product(A,X)
+		zero is success, 1 is failure.
+		@{
+	 */
+	#pragma mark In-place operations
+	
+	int Product(const Matrix& A, const Matrix& X);                          // C = A*X
+	
+	int LinearSum(MathNumber a, const Matrix& A, MathNumber b, const Matrix& B);    // C = a*A + b*B
+	
+	int Add(const Matrix& A) { return LinearSum(1.0,*this,1.0,A); };        // C = C+A
+	
+	int Add(MathNumber a);                                                      // C = C+a
+	
+	int Subtract(const Matrix& A) { return LinearSum(1.0,*this,-1.0,A); };  // C = C-A
+	
+	int Subtract(MathNumber a) { return Add(-a); };                             // C = C-a
+	
+	int Multiply(const Matrix& A);                                          // C = C.*A
+	
+	int Multiply(MathNumber a);                                                 // C = a*C
+	
+	int Divide(const Matrix& A);                                            // C = C./A
+	
+	int Copy(const Matrix& A);                                              // C = A
+	
+	int Insert(const Matrix& A, long int is, long int ie,                   // C(is:ie,js:je) = A
+	 long int js, long int je);
+	
+	/// C = a
+	int Constant(double a);
+	
+	/// C = C.^p
+	int Power(double p);
+	
+	/// Cij = |Cij|
+	int Abs();
+	
+	/// C = C^T
+	int Trans();
+	
+	/// C = C^{-1}
+	int Inverse();
+	/// @}
+	// end of In-place operations
+	
+	
+	/** @defgroup In-place operation aliases
+		C is the matrix calling the routine, i.e. C = A*X is C.Product(A,X)
+		zero is success, 1 is failure.
+		@{
+	 */
+	#pragma mark In-place operation aliases
+	
+	/// C = C+A
+	int operator+=(const Matrix& A) {
+		return Add(A);
+	}
+	
+	/// C = C+a (add a to all entries)
+	int operator+=(double a)        { return Add(a); }
+	
+	/// C = C-A
+	int operator-=(const Matrix& A) { return Subtract(A); }
+	
+	/// C = C-a (add -a to all entries)
+	int operator-=(double a)        { return Subtract(a); };
+	
+	/// C = C.*A (componentwise multiply)
+	int operator*=(const Matrix& A) { return Multiply(A); };
+	
+	/// C = a*C
+	int operator*=(double a)        { return Multiply(a); };
+	
+	/// C = C./A (componentwise divide)
+	int operator/=(const Matrix& A) { return Divide(A); };
+	
+	/// C = (1/a)*C
+	int operator/=(double a)        { return Multiply(1.0/a); };
+	
+	/// C = C.^p (componentwise power)
+	int operator^=(double p)        { return Power(p); };
+	
+	/// C = a (all entries equal a)
+	int operator=(double a)         { return Constant(a); };
+	/// @}
+	// end of In-place operation aliases
+	
+	
+	// derived matrix creation operations (C is the output, A calls the operation)
+	Matrix T();                                              // C = A^T
+	Matrix Extract(long int is, long int ie,                 // C = A(is:ie,js:je)
+	 long int js, long int je);
 
-  // column accessor routines
-  std::vector<double>& Column(size_t i);
-  std::vector<double>& operator[](size_t i);
-
-  // row accessor (copy) routine
-  std::vector<double> Row(size_t i);
-
-  // Matlab/Fortran-style accessors
-  double& operator()(size_t i, size_t j);
-  double operator()(size_t i, size_t j) const;
-  double& operator()(size_t idx);
-  double operator()(size_t idx) const;
-
-  // output routines
-  int Write() const;                                                      // write to stdout
-  int Write(const char *outfile) const;                                   // write to a file
-  friend std::ostream& operator<<(std::ostream& os, const Matrix& A);     // streaming output routine
-
-  // in-place operations (C is the matrix calling the routine) -- 0=success, 1=fail
-  int Product(const Matrix& A, const Matrix& X);                          // C = A*X
-  int LinearSum(double a, const Matrix& A, double b, const Matrix& B);    // C = a*A + b*B
-  int Add(const Matrix& A) { return LinearSum(1.0,*this,1.0,A); };        // C = C+A
-  int Add(double a);                                                      // C = C+a
-  int Subtract(const Matrix& A) { return LinearSum(1.0,*this,-1.0,A); };  // C = C-A
-  int Subtract(double a) { return Add(-a); };                             // C = C-a
-  int Multiply(const Matrix& A);                                          // C = C.*A
-  int Multiply(double a);                                                 // C = a*C
-  int Divide(const Matrix& A);                                            // C = C./A
-  int Copy(const Matrix& A);                                              // C = A
-  int Insert(const Matrix& A, long int is, long int ie,                   // C(is:ie,js:je) = A
-	     long int js, long int je);
-  int Constant(double a);                                                 // C = a
-  int Power(double p);                                                    // C = C.^p
-  int Abs();                                                              // Cij = |Cij|
-  int Trans();                                                            // C = C^T
-  int Inverse();                                                          // C = C^{-1}
-
-  // in-place arithmetic shortcut operators -- 0=success, 1=fail
-  int operator+=(const Matrix& A) { return Add(A); };      // C = C+A
-  int operator+=(double a)        { return Add(a); };      // C = C+a (add a to all entries)
-  int operator-=(const Matrix& A) { return Subtract(A); }; // C = C-A 
-  int operator-=(double a)        { return Subtract(a); }; // C = C-a (add -a to all entries)
-  int operator*=(const Matrix& A) { return Multiply(A); }; // C = C.*A (componentwise multiply)
-  int operator*=(double a)        { return Multiply(a); }; // C = a*C
-  int operator/=(const Matrix& A) { return Divide(A); };   // C = C./A (componentwise divide)
-  int operator/=(double a)        { return Multiply(1.0/a); };  // C = (1/a)*C
-  int operator^=(double p)        { return Power(p); };    // C = C.^p (componentwise power)
-  int operator=(double a)         { return Constant(a); }; // C = a (all entries equal a)
-
-  // derived matrix creation operations (C is the output, A calls the operation)
-  Matrix T();                                              // C = A^T
-  Matrix Extract(long int is, long int ie,                 // C = A(is:ie,js:je)
-		 long int js, long int je);
-
-  // Scalar output operators on matrices
-  double Min() const;                             // min_ij Cij
-  double Max() const;                             // min_ij Cij
-  bool operator==(const Matrix& A) const;         // check for Matrix equality
-
+	// Scalar output operators on matrices
+	double Min() const;                             // min_ij Cij
+	double Max() const;                             // min_ij Cij
+	bool operator==(const Matrix& A) const;         // check for Matrix equality
 };
 
 
@@ -134,10 +285,10 @@ Matrix operator-(const Matrix& A, const Matrix &B);        // C = A-B
 Matrix operator*(const Matrix& A, const Matrix &B);        // C = A*B
 Matrix operator*(const Matrix& A, const double b);         // C = A*b
 Matrix operator*(const double a, const Matrix& B);         // C = a*B
-Matrix Linspace(double a, double b, size_t m, size_t n);   // linear span
-Matrix Logspace(double a, double b, size_t m, size_t n);   // logarithmic span
-Matrix Random(size_t m, size_t n);                         // Cij random in [0,1]
-Matrix Eye(size_t n);                                      // Cij = delta_i(j)
+Matrix Linspace(double a, double b, Index m, Index n);   // linear span
+Matrix Logspace(double a, double b, Index m, Index n);   // logarithmic span
+Matrix Random(Index m, Index n);                         // Cij random in [0,1]
+Matrix Eye(Index n);                                      // Cij = delta_i(j)
 Matrix MatrixRead(const char *infile);                     // creates from input file
 Matrix Inverse(const Matrix& A);                           // C = A^{-1}
 
@@ -146,70 +297,74 @@ Matrix Inverse(const Matrix& A);                           // C = A^{-1}
 //--- supplementary matrix-vector arithmetic routines ---
 
 // standard matrix-vector product -> new vector (function form)
-std::vector<double> MatVec(const Matrix& A, const std::vector<double>& v);
+MathVector MatVec(const Matrix& A, const MathVector& v);
 
 // standard matrix-vector product -> new column vector
-std::vector<double> operator*(const Matrix& A, const std::vector<double>& v);
+MathVector operator*(const Matrix& A, const MathVector& v);
 
 
 //--- supplementary vector<double> vector-arithmetic routines ---
 
 // output routine
-int VecWrite(const std::vector<double>&v, const char *outfile);
+int VecWrite(const MathVector&v, const char *outfile);
 
 // inner product between two vectors
-double Dot(const std::vector<double>& v1, const std::vector<double>& v2);
+double Dot(const MathVector& v1, const MathVector& v2);
 
 // norms
-double Norm(const std::vector<double>& v);      // sqrt(sum_i vi^2) (vector 2-norm)
-double InfNorm(const std::vector<double>& v);   // max_i |vi|       (vector inf-norm)
-double OneNorm(const std::vector<double>& v);   // sum_i |vi|       (vector 1-norm)
+double Norm(const MathVector& v);      // sqrt(sum_i vi^2) (vector 2-norm)
+double InfNorm(const MathVector& v);   // max_i |vi|       (vector inf-norm)
+double OneNorm(const MathVector& v);   // sum_i |vi|       (vector 1-norm)
 
 // creates a vector of n linearly spaced values from a through b
-std::vector<double> Linspace(double a, double b, size_t n);
+MathVector Linspace(double a, double b, Index n);
 
 // creates a vector of n logarithmically spaced values from 10^a through 10^b
-std::vector<double> Logspace(double a, double b, size_t n);
+MathVector Logspace(double a, double b, Index n);
 	   
 // creates a vector of n uniformly-distributed random values
-std::vector<double> Random(size_t n);
+MathVector Random(Index n);
 
 // output routines 
-std::ostream& operator<<(std::ostream& os, const std::vector<double>& v);
+std::ostream& operator<<(std::ostream& os, const MathVector& v);
 
 // extract/insert routines for portions of vectors
-std::vector<double> VecExtract(std::vector<double>& x,       // y = x(is:ie)
+MathVector VecExtract(MathVector& x,       // y = x(is:ie)
                                long int is, long int ie);
-int VecInsert(std::vector<double>& x, long int is,           // x(is:ie) = y
-              long int ie, std::vector<double>& y);
+int VecInsert(MathVector& x, long int is,           // x(is:ie) = y
+              long int ie, MathVector& y);
 
-// arithmetic operators for vector<double>
-std::vector<double>& operator+=(std::vector<double>& v, const double c);
-std::vector<double>& operator+=(std::vector<double>& v, const std::vector<double>& w);
-std::vector<double>& operator-=(std::vector<double>& v, const double c);
-std::vector<double>& operator-=(std::vector<double>& v, const std::vector<double>& w);
-std::vector<double>& operator*=(std::vector<double>& v, const double c);
-std::vector<double>& operator*=(std::vector<double>& v, const std::vector<double>& w);
-std::vector<double>& operator/=(std::vector<double>& v, const double c);
-std::vector<double>& operator/=(std::vector<double>& v, const std::vector<double>& w);
-std::vector<double>& operator^=(std::vector<double>& v, const double c);
-std::vector<double>& operator^=(std::vector<double>& v, const std::vector<double>& w);
+// arithmetic operators for MathVector
+MathVector& operator+=(MathVector& v, const double c);
+MathVector& operator+=(MathVector& v, const MathVector& w);
 
-std::vector<double> operator+(const std::vector<double>& v, const double c);
-std::vector<double> operator+(const double c, const std::vector<double>& v);
-std::vector<double> operator+(const std::vector<double>& v, const std::vector<double>& w);
-std::vector<double> operator-(const std::vector<double>& v, const double c);
-std::vector<double> operator-(const double c, const std::vector<double>& v);
-std::vector<double> operator-(const std::vector<double>& v, const std::vector<double>& w);
-std::vector<double> operator*(const std::vector<double>& v, const double c);
-std::vector<double> operator*(const double c, const std::vector<double>& v);
-std::vector<double> operator*(const std::vector<double>& v, const std::vector<double>& w);
-std::vector<double> operator/(const std::vector<double>& v, const double c);
-std::vector<double> operator/(const double c, const std::vector<double>& v);
-std::vector<double> operator/(const std::vector<double>& v, const std::vector<double>& w);
-std::vector<double> operator^(const std::vector<double>& v, const double c);
-std::vector<double> operator^(const double c, const std::vector<double>& v);
-std::vector<double> operator^(const std::vector<double>& v, const std::vector<double>& w);
+MathVector& operator-=(MathVector& v, const double c);
+MathVector& operator-=(MathVector& v, const MathVector& w);
+
+MathVector& operator*=(MathVector& v, const double c);
+MathVector& operator*=(MathVector& v, const MathVector& w);
+
+MathVector& operator/=(MathVector& v, const double c);
+MathVector& operator/=(MathVector& v, const MathVector& w);
+
+MathVector& operator^=(MathVector& v, const double c);
+MathVector& operator^=(MathVector& v, const MathVector& w);
+
+MathVector operator+(const MathVector& v, const double c);
+MathVector operator+(const double c, const MathVector& v);
+MathVector operator+(const MathVector& v, const MathVector& w);
+MathVector operator-(const MathVector& v, const double c);
+MathVector operator-(const double c, const MathVector& v);
+MathVector operator-(const MathVector& v, const MathVector& w);
+MathVector operator*(const MathVector& v, const double c);
+MathVector operator*(const double c, const MathVector& v);
+MathVector operator*(const MathVector& v, const MathVector& w);
+MathVector operator/(const MathVector& v, const double c);
+MathVector operator/(const double c, const MathVector& v);
+MathVector operator/(const MathVector& v, const MathVector& w);
+MathVector operator^(const MathVector& v, const double c);
+MathVector operator^(const double c, const MathVector& v);
+MathVector operator^(const MathVector& v, const MathVector& w);
 
 
 
@@ -227,11 +382,11 @@ Matrix BackSubstitution(const Matrix& U, const Matrix& B);
 
 // backward substitution on U*x = b, filling in an existing vector<double> x
 //    U and b remain unchanged in this operation; x holds the result
-int BackSubstitution(const Matrix& U, std::vector<double>& x, const std::vector<double>& b);
+int BackSubstitution(const Matrix& U, MathVector& x, const MathVector& b);
 
 // backward substitution on U*x = b, returning x as a new vector<double>
 //    U and b remain unchanged in this operation
-std::vector<double> BackSubstitution(const Matrix& U, const std::vector<double>& b);
+MathVector BackSubstitution(const Matrix& U, const MathVector& b);
 
 // forward substitution on the linear system L*X = B, filling in the input Matrix X
 //    L and B remain unchanged in this operation; X holds the result
@@ -244,11 +399,11 @@ Matrix ForwardSubstitution(const Matrix& L, const Matrix& B);
 
 // forward substitution on L*x = b, filling in an existing vector<double) x
 //    L and b remain unchanged in this operation; x holds the result
-int ForwardSubstitution(const Matrix& L, std::vector<double>& x, const std::vector<double>& b);
+int ForwardSubstitution(const Matrix& L, MathVector& x, const MathVector& b);
 
 // forward substitution on L*x = b, returning x as a new vector<double>
 //    L and b remain unchanged in this operation
-std::vector<double> ForwardSubstitution(const Matrix& L, const std::vector<double>& b);
+MathVector ForwardSubstitution(const Matrix& L, const MathVector& b);
 
 // solves a linear system A*X = B, filling in the input Matrix X
 //    A and B are modified in this operation; X holds the result
@@ -260,11 +415,11 @@ Matrix LinearSolve(Matrix& A, Matrix& B);
 
 // solves a linear system A*x = b, filling in the input vector<double> x
 //    A and b are modified in this operation; x holds the result
-int LinearSolve(Matrix& A, std::vector<double>& x, std::vector<double>& b);
+int LinearSolve(Matrix& A, MathVector& x, MathVector& b);
 
 // solves a linear system A*x = b, returning x as a new vector<double>
 //    A and b are modified in this operation; x holds the result
-std::vector<double> LinearSolve(Matrix& A, std::vector<double>& b);
+MathVector LinearSolve(Matrix& A, MathVector& b);
 
 
-#endif  // MATRIX_DEFINED__
+#endif // MATRIX_DEFINED__

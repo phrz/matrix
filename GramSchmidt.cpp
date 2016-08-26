@@ -2,10 +2,11 @@
    SMU Mathematics
    19 June 2015 */
 
-// Inclusions
 #include <stdlib.h>
 #include <stdio.h>
-#include "matrix.hpp"
+
+#include "Matrix.h"
+
 using namespace std;
 
 
@@ -13,33 +14,33 @@ using namespace std;
 int GramSchmidt(Matrix& X) {
 
   // check that there is work to do
-  if (X.Columns() < 1)  return 0;
+  if (X.columns() < 1)  return 0;
 
   // get entry magnitude (for linear dependence check)
   double Xmax = InfNorm(X);
 
   // normalize first column
-  double colnorm = Norm(X[0]);
+  double colnorm = Norm(X(0));
   if (colnorm < 1.e-13*Xmax) {
     fprintf(stderr,"GramSchmidt error: vectors are linearly-dependent!\n");
     return 1;
   }
-  X[0] *= 1.0/colnorm;
+  X(0) *= 1.0/colnorm;
 
   // iterate over remaining vectors, performing Gram-Schmidt process
-  for (int i=1; i<X.Columns(); i++) {
+  for (int i=1; i<X.columns(); i++) {
     
     // subtract off portions in directions of existing basis vectors
     for (int j=0; j<i; j++)
-      X[i] -= Dot(X[i], X[j]) * X[j];
+      X(j) -= Dot(X(i), X(j)) * X(j);
 
     // normalize vector, checking for linear dependence
-    colnorm = Norm(X[i]);
+    colnorm = Norm(X(i));
     if (colnorm < 1.e-13*Xmax) {
       fprintf(stderr,"GramSchmidt error: vectors are linearly-dependent!\n");
       return 1;
     }
-    X[i] *= 1.0/colnorm;
+    X(i) *= 1.0/colnorm;
   }
 
   // return success
