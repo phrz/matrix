@@ -385,7 +385,7 @@ int main(int argc, char* argv[]) {
   Matrix C_ = 100.0*Eye(9) + Random(9,9);
   Matrix z_ = Logspace(-4.0, 4.0, 9, 1);
   Matrix f_ = C_*z_;
-  Matrix g_ = LinearSolve(C_, f_);
+  Matrix g_ = linearSolve(C_, f_);
   cout << "  ||x - xtrue|| = " << InfNorm(g_ - z_) << endl;
 
   printf("Testing subarray copy, should be: \n");
@@ -408,7 +408,7 @@ int main(int argc, char* argv[]) {
   printf("Testing general solver with matrix rhs & solution:\n");
   Matrix E_ = 100.0*Eye(4) + Random(4,4);
   Matrix F_ = E_*B_;
-  Matrix X_ = LinearSolve(E_, F_);
+  Matrix X_ = linearSolve(E_, F_);
   cout << "  ||X - Xtrue|| = " << InfNorm(X_ - B_) << endl;
 
   printf("Testing matrix inverse:\n");
