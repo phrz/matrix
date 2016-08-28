@@ -680,7 +680,7 @@ namespace PH {
 	}
 
 	// create a new matrix of linearly spaced data
-	Matrix Linspace(MathNumber a, MathNumber b, Index m, Index n) {
+	Matrix linSpace(MathNumber a, MathNumber b, Index m, Index n) {
 	  Matrix C(m,n);
 	  MathNumber h = (b-a)/(m*n-1);
 	  Index idx=0;
@@ -691,7 +691,7 @@ namespace PH {
 	}
 
 	// create a new column-vector matrix of logarithmically spaced data
-	Matrix Logspace(MathNumber a, MathNumber b, Index m, Index n) {
+	Matrix logSpace(MathNumber a, MathNumber b, Index m, Index n) {
 	  Matrix C(m,n);
 	  MathNumber h = (b-a)/(m*n-1);
 	  Index idx=0;
@@ -702,7 +702,7 @@ namespace PH {
 	}
 
 	// create a matrix with uniformly-distributed random numbers in [0,1]
-	Matrix Random(Index m, Index n) {
+	Matrix randomMatrixOfSize(Index m, Index n) {
 	  Matrix C(m,n);
 	  for (Index j=0; j<n; j++)
 		for (Index i=0; i<m; i++)
@@ -775,7 +775,7 @@ namespace PH {
 
 	//--- linear algebra routines ---
 
-	// backward substitution on the linear system U*X = B, filling in an existing Matrix X
+	// backward substitution on the linear system U*X = B, filling in a Matrix X
 	std::optional<Matrix> backSubstitution(const Matrix& U, const Matrix& B) {
 
 		auto X = Matrix(U.rows(), B.columns());
@@ -822,7 +822,7 @@ namespace PH {
 	}
 
 	// backward substitution on U*x = b, returning Vector x
-	std::optional<Vector> backSubstitution(const Matrix& U, const MathVector& b) {
+	std::optional<Vector> backSubstitution(const Matrix& U, const Vector& b) {
 		
 		auto x = Vector(U.rows());
 		std::optional<Vector> emptyResult;

@@ -32,7 +32,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
-#include <experimental/optional>
+#include "optional.h"
 
 // for accessing pi via M_PI
 #ifndef _USE_MATH_DEFINES
@@ -147,8 +147,8 @@ namespace PH {
 		 */
 		#pragma mark Row or Column Accessors
 		
-		MathVector& column(Index i);
-		MathVector row(Index i);
+		Raw1DArray& column(Index i);
+		Raw1DArray row(Index i);
 		/// @}
 		// end of Row or Column Accessors
 		
@@ -312,7 +312,7 @@ namespace PH {
 	Matrix operator*(const double a, const Matrix& B);         // C = a*B
 	Matrix linSpace(double a, double b, Index m, Index n);   // linear span
 	Matrix logSpace(double a, double b, Index m, Index n);   // logarithmic span
-	Matrix Random(Index m, Index n);                         // Cij random in [0,1]
+	Matrix randomMatrixOfSize(Index m, Index n);                         // Cij random in [0,1]
 	Matrix Eye(Index n);                                      // Cij = delta_i(j)
 	Matrix MatrixRead(const char *infile);                     // creates from input file
 	Matrix Inverse(const Matrix& A);                           // C = A^{-1}
@@ -330,22 +330,13 @@ namespace PH {
 
 	//--- linear algebra routines ---
 
-	// backward substitution on the linear system U*X = B, filling in an existing Matrix X
-	//    U and B remain unchanged in this operation; X holds the result
-	//    B and X may have multiple columns
-	int backSubstitution(const Matrix& U, Matrix& X, const Matrix& B);
-
 	// backward substitution on the linear system U*X = B, returning X as a new Matrix
 	//    U and B remain unchanged in this operation
-	Matrix backSubstitution(const Matrix& U, const Matrix& B);
+	std::optional<Matrix> backSubstitution(const Matrix& U, const Matrix& B);
 
-	// backward substitution on U*x = b, filling in an existing vector<double> x
-	//    U and b remain unchanged in this operation; x holds the result
-	int backSubstitution(const Matrix& U, MathVector& x, const MathVector& b);
-
-	// backward substitution on U*x = b, returning x as a new vector<double>
+	// backward substitution on U*x = b, returning x as a new Vector
 	//    U and b remain unchanged in this operation
-	MathVector backSubstitution(const Matrix& U, const MathVector& b);
+	std::optional<Vector> backSubstitution(const Matrix& U, const Vector& b);
 
 	// forward substitution on the linear system L*X = B, returning X as a new Matrix
 	// L and B remain unchanged in this operation
@@ -353,19 +344,15 @@ namespace PH {
 
 	// forward substitution on L*x = b, returning x as a new vector<double>
 	// L and b remain unchanged in this operation
-	std::optional<Vector> ForwardSubstitution(const Matrix& L, const Vector& b)
+	std::optional<Vector> ForwardSubstitution(const Matrix& L, const Vector& b);
 
 	// solves a linear system A*X = B, returning X as a new Matrix
 	// A and B are modified in this operation; X holds the result
-	std::optional<Matrix> linearSolve(Matrix& A, Matrix& B)
+	std::optional<Matrix> linearSolve(Matrix& A, Matrix& B);
 
 	// solves a linear system A*x = b, filling in the input vector<double> x
 	// A and b are modified in this operation; x holds the result
-	std::optional<Vector> linearSolve(Matrix& A, Vector& b)
-
-	// solves a linear system A*x = b, returning x as a new vector<double>
-	// A and b are modified in this operation; x holds the result
-	MathVector linearSolve(Matrix& A, MathVector& b);
+	std::optional<Vector> linearSolve(Matrix& A, Vector& b);
 
 } // namespace PH
 
