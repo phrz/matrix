@@ -8,24 +8,14 @@ using namespace std;
 
 namespace PH {
 
-	// This file implements the operations defined in Matrix class, along with a
-	// variety of linear algebra functions defined based on matrices and vectors
-
-	/// general Matrix class routines
-
 	// general constructor (initializes values to 0.0)
 	Matrix::Matrix(Index r, Index c) {
 		this->resize(r,c);
 	}
-
-	// column-vector matrix constructor (initializes values to 0.0)
-	Matrix::Matrix(Index r) {
-		int c = 1;
-		this->resize(r,c);
-	}
-
-	// constructor that copies input data (1D vector)
-	Matrix::Matrix(Index r, Index c, MathVector source) {
+	
+	
+	template<int r, int c>
+	static Matrix& Matrix::fromArray(Raw1DArray source) {
 		if (r*c != source.size()) {
 			cerr << "Matrix constructor error: incompatible shape with vector length\n";
 		}
@@ -41,20 +31,8 @@ namespace PH {
 		}
 	}
 
-	// constructor that copies input data (1D vector) into a column vector
-	Matrix::Matrix(MathVector source) {
-		int rows = vals.size();
-		int columns = 1;
-		
-		this->resize(rows, columns);
-
-		for (Index row = 0; row < _rows; row++) {
-			_data[0][row] = vals[row];
-		}
-	}
-
 	// constructor that copies input data (2D vector)
-	Matrix::Matrix(Math2DArray source) {
+	Matrix::Matrix(Raw2DArray source) {
 		_columnCount = source.size();
 		_rows = source[0].size();
 		
@@ -68,69 +46,10 @@ namespace PH {
 			}
 		}
 	}
-
-	// string utility routines we'll need for string-based constructor
-	vector<string>& split(const string& s, char delim, vector<string>& elems) {
-		stringstream ss(s);
-		string item;
+	
+	// Raw2DArray -> conversion by assignment constructor
+	Matrix& Matrix::operator=(const Raw2DArray& source) {
 		
-		while (getline(ss, item, delim)) {
-			elems.push_back(item);
-		}
-		
-		return elems;
-	}
-
-	vector<string> split(const string& s, char delim) {
-		vector<string> elems;
-
-		split(s, delim, elems);
-
-		return elems;
-	}
-
-	// string-based matrix constructor
-	Matrix::Matrix(string mat_spec) {
-
-		// initialize empty matrix
-		_rows = 0;
-		_columnCount = 0;
-
-		// parse string to determine matrix rows
-		vector<string> rows = split(mat_spec, ';');
-		Index m = rows.size();
-		if (m < 1) {
-			cerr << "string Matrix constructor error: empty string!\n";
-			return;
-		}
-
-		// verify that all rows have the same number of columns
-		vector<string> strrow = split(rows[0], ',');
-		Index n = strrow.size();
-		for (Index i=1; i<m; i++) {
-			strrow = split(rows[i], ',');
-			if (strrow.size() != n) {
-				cerr << "string Matrix constructor error: all rows must have the same number of columns!\n";
-				return;
-			}
-		}
-
-		// allocate matrix data
-		_data.resize(n);
-		for (Index j=0; j<n; j++) {
-			_data[j].resize(m, 0.0);
-		}
-
-		// fill Matrix structure
-		_rows = m;
-		_columnCount = n;
-		for (Index row = 0; row < _rows; row++) {
-			strrow = split(rows[row], ',');
-			for (Index column = 0; column < _columnCount; column++) {
-				stringstream ss(strrow[column]);
-				ss >> _data[column][row];
-			}
-		}
 	}
 
 	// copy constructor
@@ -368,25 +287,6 @@ namespace PH {
 		  _data[j][i] /= A._data[j][i];
 		}
 
-	  // return success
-	  return 0;
-	}
-
-	//   C = A  (copies A into C)
-	int Matrix::Copy(const Matrix& A) {
-
-	  // check that array sizes match
-	  if (A._rows != _rows || A._columnCount != _columnCount) {
-		cerr << "Matrix::Copy error, matrix size mismatch\n";
-		cerr << "  Matrix 1 is " << _rows << " x " << _columnCount 
-		 << ",  Matrix 2 is " << A._rows << " x " << A._columnCount << endl;
-		return 1;
-	  }
-	  
-	  // perform operation
-	  for (Index j=0; j<A._columnCount; j++)
-		_data[j] = A._data[j];
-	  
 	  // return success
 	  return 0;
 	}
@@ -876,422 +776,354 @@ namespace PH {
 	//--- linear algebra routines ---
 
 	// backward substitution on the linear system U*X = B, filling in an existing Matrix X
-	int backSubstitution(const Matrix& U, Matrix& X, const Matrix& B) {
+	std::optional<Matrix> backSubstitution(const Matrix& U, const Matrix& B) {
 
-	  // check that matrix sizes match
-	  if (U.rows() != B.rows() || U.rows() != U.columns() || 
-		  B.columns() != X.columns() || X.rows() != U.rows()) {
-		cerr << "BackSubstitution error, incompatible matrix/vector dimensions\n";
-		cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
-		 << ",  rhs is " << B.rows() << " x " << B.columns()
-		 << ",  solution is " << X.rows() << " x " << X.columns() << endl;
-		return 1;
-	  }
-	  
-	  // copy B into X
-	  X.Copy(B);
+		auto X = Matrix(U.rows(), B.columns());
+		std::optional<Matrix> emptyResult;
 
-	  // analyze matrix for magnitude
-	  MathNumber Umax = InfNorm(U);
-
-	  // perform column-oriented Backward Substitution algorithm
-	  for (long int j=U.rows()-1; j>=0; j--) {
-
-		// check for nonzero matrix diagonal
-		if (fabs(U._data[j][j]) < STOL*Umax) {
-		  cerr << "BackSubstitution error: numerically singular matrix!\n";
-		  return 1;
+		// check that matrix sizes match
+		if (U.rows() != B.rows() || not U.isSquare()) {
+			cerr << "BackSubstitution error, incompatible matrix/vector dimensions\n";
+			cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
+			<< ",  rhs is " << B.rows() << " x " << B.columns()
+			<< ",  solution is " << X.rows() << " x " << X.columns() << endl;
+			return emptyResult;
 		}
 
-		// solve for this row of solution
-		for (long int k=0; k<X.columns(); k++) 
-		  X._data[k][j] /= U._data[j][j];
+		// copy B into X
+		X = B;
 
-		// update all remaining rhs
-		for (long int k=0; k<X.columns(); k++)
-		  for (long int i=0; i<j; i++)
-		X._data[k][i] -= U._data[j][i]*X._data[k][j];
+		// analyze matrix for magnitude
+		MathNumber Umax = InfNorm(U);
 
-	  }
+		// perform column-oriented Backward Substitution algorithm
+		for (Index j=U.rows()-1; j>=0; j--) {
+			// check for nonzero matrix diagonal
+			if (abs(U._data[j][j]) < STOL*Umax) {
+				cerr << "BackSubstitution error: numerically singular matrix!\n";
+				return emptyResult;
+			}
 
-	  // return success
-	  return 0;
+			// solve for this row of solution
+			for (Index k=0; k<X.columns(); k++) {
+				X._data[k][j] /= U._data[j][j];
+			}
+
+			// update all remaining rhs
+			for (Index k=0; k<X.columns(); k++) {
+				for (Index i=0; i<j; i++) {
+					X._data[k][i] -= U._data[j][i]*X._data[k][j];
+				}
+			}
+		} // end Back sub.
+
+		// return success
+		return std::optional<Matrix>(X);
 	}
 
-	// backward substitution on the linear system U*X = B, returning X as a new Matrix; 
-	//    U and B remain unchanged in this operation
-	Matrix backSubstitution(const Matrix& U, const Matrix& B) {
-
-	  // check that matrix sizes match
-	  if (U.rows() != B.rows() || U.rows() != U.columns()) {
-		cerr << "BackSubstitution error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
-		 << ",  rhs is " << B.rows() << " x " << B.columns() << endl;
-		return Matrix(0,0);
-	  } else {
-		// create new Matrix for output and call existing BackSubstitution routine
-		Matrix X(U.rows(),B.columns());
-		if (BackSubstitution(U, X, B) != 0)
-		  cerr << "BackSubstitution Warning: error in BackSubstitution call\n";
-		return X;
-	  }
-	}
-
-	// backward substitution on U*x = b, filling in an existing MathVector x
-	int backSubstitution(const Matrix& U, MathVector& x, const MathVector& b) {
-
-	  // check that matrix sizes match
-	  if (U.rows() != b.size() || U.rows() != U.columns() || x.size() != U.rows()) {
-		cerr << "BackSubstitution error, incompatible matrix/vector dimensions\n";
-		cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
-		 << ",  rhs is " << b.size() << " x 1"
-		 << ",  solution is " << x.size() << " x 1\n";
-		return 1;
-	  }
-	  
-	  // copy b into x
-	  x = b;
-
-	  // analyze matrix for magnitude
-	  MathNumber Umax = InfNorm(U);
-
-	  // perform column-oriented Backward Substitution algorithm
-	  for (long int j=U.rows()-1; j>=0; j--) {
-
-		// check for nonzero matrix diagonal
-		if (fabs(U._data[j][j]) < STOL*Umax) {
-		  cerr << "BackSubstitution error: numerically singular matrix!\n";
-		  return 1;
+	// backward substitution on U*x = b, returning Vector x
+	std::optional<Vector> backSubstitution(const Matrix& U, const MathVector& b) {
+		
+		auto x = Vector(U.rows());
+		std::optional<Vector> emptyResult;
+		
+		// check that matrix sizes match
+		if (U.rows() != b.size() || U.rows() != U.columns()) {
+			cerr << "BackSubstitution error, incompatible matrix/vector dimensions\n";
+			cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
+			<< ",  rhs is " << b.size() << " x 1"
+			<< ",  solution is " << x.size() << " x 1\n";
+			return emptyResult;
 		}
 
-		// solve for this row of solution
-		x[j] /= U._data[j][j];
+		// copy b into x
+		x = b;
 
-		// update all remaining rhs
-		for (long int i=0; i<j; i++)
-		  x[i] -= U._data[j][i]*x[j];
+		// analyze matrix for magnitude
+		MathNumber Umax = InfNorm(U);
 
-	  }
+		// perform column-oriented Backward Substitution algorithm
+		for (long int j=U.rows()-1; j>=0; j--) {
+			// check for nonzero matrix diagonal
+			if (abs(U._data[j][j]) < STOL * Umax) {
+				cerr << "BackSubstitution error: numerically singular matrix!\n";
+				return emptyResult;
+			}
 
-	  // return success
-	  return 0;
+			// solve for this row of solution
+			x[j] /= U._data[j][j];
+
+			// update all remaining rhs
+			for (long int i=0; i<j; i++) {
+				x[i] -= U._data[j][i]*x[j];
+			}
+		}
+
+		// return success
+		return std::optional<Vector>(x);
 	}
 
-	// backward substitution on U*x = b, returning x as a new MathVector
-	//    U and b remain unchanged in this operation
-	MathVector backSubstitution(const Matrix& U, const MathVector& b) {
-	  if (U.rows() != b.size() || U.rows() != U.columns()) {
-		cerr << "BackSubstitution error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << U.rows() << " x " << U.columns() 
-		 << ",  rhs is " << b.size() << " x 1\n";
-		return MathVector(0);
-	  }
-
-	  // create output vector, call existing BackSubstitution routine, and return
-	  MathVector x(0.0, U.columns());
-	  if (BackSubstitution(U, x, b) != 0)
-		cerr << "BackSubstitution Warning: error in BackSubstitution call\n";
-	  return x;
-	}
-
-	// forward substitution on the linear system L*X = B, filling in the input Matrix X
+	
+	// forward substitution on the linear system L*X = B, filling in Matrix X
 	//    L and B remain unchanged in this operation; X holds the result
 	//    B and X may have multiple columns
-	int forwardSubstitution(const Matrix& L, Matrix& X, const Matrix& B) {
+	std::optional<Matrix> forwardSubstitution(const Matrix& L, const Matrix& B) {
 
-	  // check that matrix sizes match
-	  if (L.rows() != B.rows() || L.rows() != L.columns() || 
-		  B.columns() != X.columns() || X.rows() != L.rows()) {
-		cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
-		 << ",  rhs is " << B.rows() << " x " << B.columns()
-		 << ",  solution is " << X.rows() << " x " << X.columns() << endl;
-		return 1;
-	  }
-	  
-	  // copy B into X
-	  X.Copy(B);
+		auto X = Matrix(L.rows(), B.columns());
+		std::optional<Matrix> emptyResult;
 
-	  // analyze matrix magnitude
-	  MathNumber Lmax = InfNorm(L);
-
-	  // perform column-oriented Forwards Substitution algorithm
-	  for (long int j=0; j<L.rows(); j++) {
-
-		// check for nonzero matrix diagonal
-		if (fabs(L._data[j][j]) < STOL*Lmax) {
-		  cerr << "ForwardSubstitution error: singular matrix!\n";
-		  return 1;
+		// check that matrix sizes match
+		if (L.rows() != B.rows() or not L.isSquare()) {
+			cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
+			cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
+			<< ",  rhs is " << B.rows() << " x " << B.columns()
+			<< ",  solution is " << X.rows() << " x " << X.columns() << endl;
+			return emptyResult;
 		}
 
-		// solve for this row of solution
-		for (long int k=0; k<X.columns(); k++)
-		  X._data[k][j] /= L._data[j][j];
+		// copy B into X
+		X = B;
 
-		// update all remaining rhs
-		for (long int k=0; k<X.columns(); k++)
-		  for (long int i=j+1; i<L.rows(); i++)
-		X._data[k][i] -= L._data[j][i]*X._data[k][j];
+		// analyze matrix magnitude
+		MathNumber Lmax = InfNorm(L);
 
-	  }
+		// perform column-oriented Forwards Substitution algorithm
+		for (long int j=0; j<L.rows(); j++) {
+			// check for nonzero matrix diagonal
+			if (fabs(L._data[j][j]) < STOL*Lmax) {
+				cerr << "ForwardSubstitution error: singular matrix!\n";
+				return emptyResult;
+			}
 
-	  // return success
-	  return 0;
+			// solve for this row of solution
+			for (long int k=0; k<X.columns(); k++) {
+				X._data[k][j] /= L._data[j][j];
+			}
+
+			// update all remaining rhs
+			for (long int k=0; k<X.columns(); k++) {
+				for (long int i=j+1; i<L.rows(); i++) {
+					X._data[k][i] -= L._data[j][i]*X._data[k][j];
+				}
+			}
+		} // end Column-oriented forward sub.
+
+		// return success
+		return std::optional<Matrix>(X);
 	}
 
-	// forward substitution on the linear system L*X = B, returning X as a new Matrix
-	//    L and B remain unchanged in this operation
-	Matrix forwardSubstitution(const Matrix& L, const Matrix& B) {
-
-	  // check that matrix sizes match
-	  if (L.rows() != B.rows() || L.rows() != L.columns()) {
-		cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
-		 << ",  rhs is " << B.rows() << " x " << B.columns() << endl;
-		return Matrix(0,0);
-	  } else {
-		// create new Matrix for output and call existing BackSubstitution routine
-		Matrix X(L.rows(),B.columns());
-		if (ForwardSubstitution(L, X, B) != 0)
-		  cerr << "ForwardSubstitution Warning: error in ForwardSubstitution call\n";
-		return X;
-	  }
-	}
-
-	// forward substitution on L*x = b, filling in an existing vector<MathNumber) x
+	// forward substitution on L*x = b, filling in a resulting Vector x
 	//    L and b remain unchanged in this operation; x holds the result
-	int ForwardSubstitution(const Matrix& L, MathVector& x, const MathVector& b) {
+	std::optional<Vector> forwardSubstitution(const Matrix& L, const Vector& b) {
+		
+		auto x = Vector(L.rows());
+		std::optional<Vector> emptyResult;
+		
+		// check that matrix sizes match
+		if (L.rows() != b.size() || L.rows() != L.columns()) {
+			cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
+			cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
+			<< ",  rhs is " << b.size() << " x 1"
+			<< ",  solution is " << x.size() << " x 1\n";
+			return emptyResult;
+		}
+		
+		x = b;
 
-	  // check that matrix sizes match
-	  if (L.rows() != b.size() || L.rows() != L.columns() || 
-		  x.size() != L.rows()) {
-		cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
-		 << ",  rhs is " << b.size() << " x 1"
-		 << ",  solution is " << x.size() << " x 1\n";
-		return 1;
-	  }
-	  
-	  // copy B into X
-	  x = b;
+		// analyze matrix for magnitude
+		MathNumber Lmax = infNorm(L);
+		
+		// perform column-oriented Forwards Substitution algorithm
+		for (long int j=0; j<L.rows(); j++) {
 
-	  // analyze matrix for magnitude
-	  MathNumber Lmax = InfNorm(L);
+			// check for nonzero matrix diagonal
+			if (abs(L._data[j][j]) < STOL*Lmax) {
+				cerr << "ForwardSubstitution error: singular matrix!\n";
+				return emptyResult;
+			}
 
-	  // perform column-oriented Forwards Substitution algorithm
-	  for (long int j=0; j<L.rows(); j++) {
+			// solve for this row of solution
+			x[j] /= L._data[j][j];
 
-		// check for nonzero matrix diagonal
-		if (fabs(L._data[j][j]) < STOL*Lmax) {
-		  cerr << "ForwardSubstitution error: singular matrix!\n";
-		  return 1;
+			// update all remaining rhs
+			for (long int i=j+1; i<L.rows(); i++) {
+				x[i] -= L._data[j][i]*x[j];
+			}
 		}
 
-		// solve for this row of solution
-		x[j] /= L._data[j][j];
-
-		// update all remaining rhs
-		for (long int i=j+1; i<L.rows(); i++)
-		  x[i] -= L._data[j][i]*x[j];
-
-	  }
-
-	  // return success
-	  return 0;
+		// return success
+		return std::optional<Vector>(x);
 	}
 
-	// forward substitution on L*x = b, returning x as a new MathVector
-	//    L and b remain unchanged in this operation
-	MathVector ForwardSubstitution(const Matrix& L, const MathVector& b) {
-	  // check that matrix sizes match
-	  if (L.rows() != b.size() || L.rows() != L.columns()) {
-		cerr << "ForwardSubstitution error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << L.rows() << " x " << L.columns() 
-		 << ",  rhs is " << b.size() << " x 1\n";
-		return MathVector(0);
-	  }
+	// solves a linear system A*X = B, returning Matrix X
+	std::optional<Matrix> linearSolve(Matrix& A, Matrix& B) {
+		
+		auto X = Matrix(A.rows(), B.columns());
+		std::optional<Matrix> emptyResult;
+		
+		// check that matrix sizes match
+		if (A.rows() != B.rows() or not A.isSquare()) {
+			cerr << "linearSolve: illegal matrix/vector dimensions\n";
+			cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
+			<< ",  rhs is " << B.rows() << " x " << B.columns()
+			<< ",  solution is " << X.rows() << " x " << X.columns() << endl;
+			return emptyResult;
+		}
 
-	  // create output vector and return
-	  MathVector x(0.0, L.columns());
-	  if (ForwardSubstitution(L, x, b) != 0)
-		cerr << "ForwardSubstitution Warning: error in ForwardSubstitution call\n";
-	  return x;
-	}
+		// create temporary variables
+		long int i, j, k, p;
+		MathNumber Amax;
 
-	// solves a linear system A*X = B, filling in the input Mat X
-	int LinearSolve(Matrix& A, Matrix& X, Matrix& B) {
+		// determine magnitude of entries in A (for singularity check later)
+		Amax = InfNorm(A);
 
-	  // check that matrix sizes match
-	  if (A.rows() != B.rows() || A.rows() != A.columns() ||
-		  B.columns() != X.columns() || X.rows() != A.rows()) {
-		cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
-		 << ",  rhs is " << B.rows() << " x " << B.columns()
-		 << ",  solution is " << X.rows() << " x " << X.columns() << endl;
-		return 1;
-	  }
-	  
-	  // create temporary variables
-	  long int i, j, k, p;
-	  MathNumber Amax;
+		// perform Gaussian elimination to convert A,B to an upper-triangular system
+		for (k=0; k<A.rows()-1; k++) {   // loop over diagonals
 
-	  // determine magnitude of entries in A (for singularity check later)
-	  Amax = InfNorm(A);
-
-	  // perform Gaussian elimination to convert A,B to an upper-triangular system
-	  for (k=0; k<A.rows()-1; k++) {   // loop over diagonals
-
-		// find the pivot row p
-		p=k;
-		for (i=k; i<A.rows(); i++)  
-		  if (fabs(A._data[k][i]) > std::abs(A._data[k][p]))
-		p=i;
-
-		// swap rows in A
-		for (j=k; j<A.rows(); j++) 
-		  std::swap(A._data[j][p], A._data[j][k]);
-
-		// swap rows in B
-		for (j=0; j<B.columns(); j++)
-		  std::swap(B._data[j][p], B._data[j][k]);
+			// find the pivot row p
+			p=k;
 			
-		// check for nonzero matrix diagonal
-		if (abs(A._data[k][k]) < STOL*Amax) {
-		  cerr << "LinearSolve error: numerically singular matrix!\n";
-		  return 1;
-		}
+			for (i=k; i<A.rows(); i++) {
+				if (fabs(A._data[k][i]) > std::abs(A._data[k][p])) {
+					p=i;
+				}
+			}
 
-		// perform elimination using row k
-		for (i=k+1; i<A.rows(); i++)      // store multipliers in column below pivot
-		  A._data[k][i] /= A._data[k][k];
-		for (j=k+1; j<A.rows(); j++)      // loop over columns of A, to right of pivot 
-		  for (i=k+1; i<A.rows(); i++)    // update rows in column
-		A._data[j][i] -= A._data[k][i]*A._data[j][k];
-		for (j=0; j<B.columns(); j++)
-		  for (i=k+1; i<A.rows(); i++)      // update entries in B
-		B._data[j][i] -= A._data[k][i]*B._data[j][k];
-	  }
+			// swap rows in A
+			for (j=k; j<A.rows(); j++) {
+				std::swap(A._data[j][p], A._data[j][k]);
+			}
 
-	  // check for singularity at end (only need to check final diagonal entry)
-	  if (fabs(A._data[A.rows()-1][A.rows()-1]) < STOL*Amax) {
-		cerr << "LinearSolve error: numerically singular matrix!\n";
-		return 1;
-	  }
+			// swap rows in B
+			for (j=0; j<B.columns(); j++) {
+				std::swap(B._data[j][p], B._data[j][k]);
+			}
 
-	  // perform Backward Substitution on result
-	  if (BackSubstitution(A, X, B) != 0) {
-		cerr << "LinearSolve: error in BackSubstitution call\n";
-		return 1;
-	  }
+			// check for nonzero matrix diagonal
+			if (abs(A._data[k][k]) < STOL*Amax) {
+				cerr << "linearSolve: numerically singular matrix!\n";
+				return emptyResult;
+			}
 
-	  // return success
-	  return 0;
-	}
-
-	// solves a linear system A*X = B, returning X as a new Matrix
-	Matrix LinearSolve(Matrix& A, Matrix& B) {
-
-	  // check that matrix sizes match
-	  if (A.rows() != B.rows() || A.rows() != A.columns()) {
-		cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
-		 << ",  rhs is " << B.rows() << " x " << B.columns() << endl;
-		return Matrix(0,0);
-	  } else {
-		// create new Mat for output, and call existing LinearSolve routine
-		Matrix X(A.rows(),B.columns());
-		if (LinearSolve(A, X, B) != 0)
-		  cerr << "LinearSolve: error in in-place LinearSolve call\n";
-		return X;
-	  }
-	}
-
-	// solves a linear system A*x = b, filling in the input MathVector x
-	//    A and b are modified in this operation; x holds the result
-	int LinearSolve(Matrix& A, MathVector& x, MathVector& b) {
-
-	  // check that matrix sizes match
-	  if (A.rows() != b.size() || A.rows() != A.columns() ||
-		  x.size() != A.columns()) {
-		cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
-		 << ",  rhs is " << b.size() << " x 1"
-		 << ",  solution is " << x.size() << " x 1\n";
-		return 1;
-	  }
-	  
-	  // create temporary variables
-	  long int i, j, k, p;
-	  MathNumber Amax;
-
-	  // determine magnitude of entries in A (for singularity check later)
-	  Amax = InfNorm(A);
-
-	  // perform Gaussian elimination to convert A,B to an upper-triangular system
-	  for (k=0; k<A.rows()-1; k++) {   // loop over diagonals
-
-		// find the pivot row p
-		p=k;
-		for (i=k; i<A.rows(); i++)  
-		  if (fabs(A._data[k][i]) > fabs(A._data[k][p]))
-		p=i;
-
-		// swap rows in A
-		for (j=k; j<A.rows(); j++) 
-		  std::swap(A._data[j][p], A._data[j][k]);
-
-		// swap rows in b
-		std::swap(b[p], b[k]);
+			// perform elimination using row k
+			// store multipliers in column below pivot
+			for (i=k+1; i<A.rows(); i++) {
+				A._data[k][i] /= A._data[k][k];
+			}
 			
-		// check for nonzero matrix diagonal
-		if (fabs(A._data[k][k]) < STOL*Amax) {
-		  cerr << "LinearSolve error: numerically singular matrix!\n";
-		  return 1;
+			for (j=k+1; j<A.rows(); j++) {      // loop over columns of A, to right of pivot
+				for (i=k+1; i<A.rows(); i++) {   // update rows in column
+					A._data[j][i] -= A._data[k][i]*A._data[j][k];
+				}
+			}
+			
+			for (j=0; j<B.columns(); j++) {
+				// update entries in B
+				for (i=k+1; i<A.rows(); i++) {
+					B._data[j][i] -= A._data[k][i]*B._data[j][k];
+				}
+			}
+		} // end Gaussian elimination
+
+		// check for singularity at end (only need to check final diagonal entry)
+		if (abs(A._data[A.rows()-1][A.rows()-1]) < STOL*Amax) {
+			cerr << "linearSolve error: numerically singular matrix!\n";
+			return emptyResult;
 		}
 
-		// perform elimination using row k
-		for (i=k+1; i<A.rows(); i++)      // store multipliers in column below pivot
-		  A._data[k][i] /= A._data[k][k];
-		for (j=k+1; j<A.rows(); j++)      // loop over columns of A, to right of pivot 
-		  for (i=k+1; i<A.rows(); i++)    // update rows in column
-		A._data[j][i] -= A._data[k][i]*A._data[j][k];
-		for (i=k+1; i<A.rows(); i++)      // update entries in b
-		  b[i] -= A._data[k][i]*b[k];
-	  }
+		// perform Backward Substitution on result
+		if (backSubstitution(A, X, B) != 0) {
+			cerr << "linearSolve: error in backSubstitution call\n";
+			return emptyResult;
+		}
 
-	  // check for singularity at end (only need to check final diagonal entry)
-	  if (fabs(A._data[A.rows()-1][A.rows()-1]) < STOL*Amax) {
-		cerr << "LinearSolve error: numerically singular matrix!\n";
-		return 1;
-	  }
-
-	  // perform Backward Substitution on result
-	  if (BackSubstitution(A, x, b) != 0) {
-		cerr << "LinearSolve: error in BackSubstitution call\n";
-		return 1;
-	  }
-
-	  // return success
-	  return 0;
+		// return success
+		return std::optional<Matrix>(X);
 	}
 
-	// solves a linear system A*x = b, returning x as a new MathVector
+	// solves a linear system A*x = b, returning Vector x
 	//    A and b are modified in this operation; x holds the result
-	MathVector LinearSolve(Matrix& A, MathVector& b) {
-
-	  // check that matrix sizes match
-	  if (A.rows() != b.size() || A.rows() != A.columns()) {
-		cerr << "LinearSolve error, illegal matrix/vector dimensions\n";
-		cerr << "  Matrix is " << A.rows() << " x " << A.columns() 
-		 << ",  rhs is " << b.size() << " x 1\n";
-		return MathVector(0);
-	  }
-
-	  // create output, call existing LinearSolve routine and return
-	  MathVector x = b;
-	  if (LinearSolve(A, x, b) != 0)
-		cerr << "LinearSolve: error in in-place LinearSolve call\n";
-	  return x;
+	std::optional<Vector> linearSolve(Matrix& A, Vector& b) {
+		
+		auto x = Vector(A.columns());
+		std::optional<Vector> emptyResult;
+		
+		// check that matrix sizes match
+		if (A.rows() != b.size() or not A.isSquare()) {
+			cerr << "linearSolve: illegal matrix/vector dimensions\n";
+			cerr << "  Matrix is " << A.rows() << " x " << A.columns()
+			<< ",  rhs is " << b.size() << " x 1"
+			<< ",  solution is " << x.size() << " x 1\n";
+			return emptyResult;
+		}
+		
+		// create temporary variables
+		Index i, j, k, p;
+		MathNumber Amax;
+		
+		// determine magnitude of entries in A (for singularity
+		// check later)
+		Amax = InfNorm(A);
+		
+		// perform Gaussian elimination to convert A,B to an
+		// upper-triangular system
+		for (k = 0; k < A.rows() - 1; k++) {	// loop over diagonals
+			
+			// find the pivot row p
+			p = k;
+			
+			for (i = k; i < A.rows(); i++) {
+				if (abs(A._data[k][i]) > abs(A._data[k][p])) {
+					p = i;
+				}
+			}
+			
+			// swap rows in A
+			for (j = k; j < A.rows(); j++) {
+				std::swap(A._data[j][p], A._data[j][k]);
+			}
+			
+			// swap rows in b
+			std::swap(b[p], b[k]);
+			
+			// check for nonzero matrix diagonal
+			if (abs(A._data[k][k]) < STOL * Amax) {
+				cerr << "LinearSolve error: numerically singular matrix!\n";
+				return 1;
+			}
+			
+			// perform elimination using row k
+			for (i = k + 1; i < A.rows(); i++) {
+				// Store multipliers in column below pivot
+				A._data[k][i] /= A._data[k][k];
+			}
+			
+			// Loop over columns of A, to right of pivot
+			for (j = k + 1; j < A.rows(); j++) {
+				// update rows in column
+				for (i = k + 1; i < A.rows(); i++) {
+					A._data[j][i] -= A._data[k][i] * A._data[j][k];
+				}
+			}
+			// update entries in b
+			for (i = k + 1; i < A.rows(); i++) {
+				b[i] -= A._data[k][i] * b[k];
+			}
+		}
+		
+		// check for singularity at end (only need to check final
+		// diagonal entry)
+		if (abs(A._data[A.rows() - 1][A.rows() - 1]) < STOL * Amax) {
+			cerr << "linearSolve: numerically singular matrix!\n";
+			return emptyResult;
+		}
+		// perform Backward Substitution on result
+		if (BackSubstitution(A, x, b) != 0) {
+			cerr << "LinearSolve: error in BackSubstitution call\n";
+			return emptyResult;
+		}
+		
+		return std::optional<Vector>(x);
 	}
 	
 } // namespace PH

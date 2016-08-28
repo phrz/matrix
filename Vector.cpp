@@ -6,35 +6,23 @@
 //  Copyright © 2016 Paul Herz. All rights reserved.
 //
 
-#include "Vector.hpp"
+#include "Vector.h"
+#include "NotImplementedException.h"
 
 namespace PH {
 	
+	// Serializable interface
+	void Vector::serialize(std::ostream& output) const {
+		
+		// [CITE] http://stackoverflow.com/a/6693088/3592716
+		// quick way to concatenate STL container with commas
+		std::ostringstream ss;
+		std::copy(_data.begin(), _data.end() - 1, std::ostream_iterator<int>(ss, ", "));
+	}
 	
-	// write vector to a file
-	int VecWrite(const MathVector& v, const char *outfile) {
-		
-		// return with failure if 'outfile' is empty
-		if (strlen(outfile) < 1) {
-			cerr << "WriteVec error, empty outfile\n";
-			return 1;
-		}
-		
-		// open output file
-		FILE *fptr = NULL;
-		fptr = fopen(outfile, "w");
-		if (fptr == NULL) {
-			cerr << "WriteVec error, unable to open " << outfile << " for writing\n";
-			return 1;
-		}
-		
-		// print data to file
-		for (Index i=0; i<v.size(); i++)
-			fprintf(fptr, "  %.16g", v[i]);
-		
-		// close output file and return
-		fclose(fptr);
-		return 0;
+	
+	static Vector& Vector::deserialize(std::istream& input) {
+		throw new NotImplementedException();
 	}
 	
 	

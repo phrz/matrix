@@ -32,6 +32,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <experimental/optional>
 
 // for accessing pi via M_PI
 #ifndef _USE_MATH_DEFINES
@@ -84,20 +85,12 @@ namespace PH {
 		/// Size constructor (zero-fills matrix)
 		Matrix(Index r, Index c);
 		
-		/// Column vector constructor (zero-fills vector)
-		Matrix(Index r);
+		/// Array wrap constructor using raw array
+		template<int r, int c>
+		static Matrix& fromArray(Raw1DArray source);
 		
-		/// Array wrap constructor for MathVector
-		Matrix(Index r, Index c, MathVector source);
-		
-		/// Column matrix constructor from MathVector
-		Matrix(MathVector source);
-		
-		/// Matrix constructor from Raw2DArray
-		Matrix(Raw2DArray vals);
-		
-		/// String-based matrix constructor, uses commas and semicolon delimiters.
-		Matrix(std::string mat_spec);
+		Matrix(Raw2DArray source);
+		Matrix& operator=(const Raw2DArray& source);
 		
 		/// Copy constructor
 		Matrix(const Matrix& A);
@@ -141,6 +134,7 @@ namespace PH {
 		 */
 		#pragma mark Dimension Accessors
 		
+		bool const isSquare() const { return _rowCount == _columnCount; }
 		Index const size() const { return _rowCount * _columnCount; }
 		Index const& rows() const { return _rowCount; }
 		Index const& columns() const { return _columnCount; }
@@ -222,9 +216,6 @@ namespace PH {
 		
 		/// C = C./A
 		int Divide(const Matrix& A);
-		
-		/// C = A
-		int Copy(const Matrix& A);
 		
 		/// C(is:ie,js:je) = A
 		int Insert(const Matrix& A, long int is, long int ie,
@@ -356,34 +347,21 @@ namespace PH {
 	//    U and b remain unchanged in this operation
 	MathVector backSubstitution(const Matrix& U, const MathVector& b);
 
-	// forward substitution on the linear system L*X = B, filling in the input Matrix X
-	// L and B remain unchanged in this operation; X holds the result
-	// B and X may have multiple columns
-	int forwardSubstitution(const Matrix& L, Matrix& X, const Matrix& B);
-
 	// forward substitution on the linear system L*X = B, returning X as a new Matrix
 	// L and B remain unchanged in this operation
-	Matrix forwardSubstitution(const Matrix& L, const Matrix& B);
-
-	// forward substitution on L*x = b, filling in an existing vector<double) x
-	// L and b remain unchanged in this operation; x holds the result
-	int forwardSubstitution(const Matrix& L, MathVector& x, const MathVector& b);
+	std::optional<Matrix> forwardSubstitution(const Matrix& L, const Matrix& B);
 
 	// forward substitution on L*x = b, returning x as a new vector<double>
 	// L and b remain unchanged in this operation
-	MathVector forwardSubstitution(const Matrix& L, const MathVector& b);
-
-	// solves a linear system A*X = B, filling in the input Matrix X
-	// A and B are modified in this operation; X holds the result
-	int linearSolve(Matrix& A, Matrix& X, Matrix& B);
+	std::optional<Vector> ForwardSubstitution(const Matrix& L, const Vector& b)
 
 	// solves a linear system A*X = B, returning X as a new Matrix
 	// A and B are modified in this operation; X holds the result
-	Matrix linearSolve(Matrix& A, Matrix& B);
+	std::optional<Matrix> linearSolve(Matrix& A, Matrix& B)
 
 	// solves a linear system A*x = b, filling in the input vector<double> x
 	// A and b are modified in this operation; x holds the result
-	int linearSolve(Matrix& A, MathVector& x, MathVector& b);
+	std::optional<Vector> linearSolve(Matrix& A, Vector& b)
 
 	// solves a linear system A*x = b, returning x as a new vector<double>
 	// A and b are modified in this operation; x holds the result

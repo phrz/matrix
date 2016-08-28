@@ -22,8 +22,10 @@ namespace PH {
 	protected:
 		Raw1DArray _data;
 	public:
-		// output routine
-		int vecWrite(const MathVector&v, const char *outfile);
+		
+		// Serializable implementation
+		void serialize(std::ostream& output) const;
+		static Vector& deserialize(std::istream& input);
 		
 		// inner product between two vectors
 		double dot(const MathVector& v1, const MathVector& v2);
