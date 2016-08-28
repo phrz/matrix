@@ -26,6 +26,8 @@
 
 // Inclusions
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -42,8 +44,8 @@
 namespace PH {
 
 	using  MathNumber = double;
-	using  MathVector = std::vector<MathNumber>;
-	using  Raw2DArray = std::vector<MathVector>;
+	using  Raw1DArray = std::vector<MathNumber>;
+	using  Raw2DArray = std::vector<Raw1DArray>;
 	using       Index = std::size_t;
 
 	/**
@@ -317,8 +319,8 @@ namespace PH {
 	Matrix operator*(const Matrix& A, const Matrix &B);        // C = A*B
 	Matrix operator*(const Matrix& A, const double b);         // C = A*b
 	Matrix operator*(const double a, const Matrix& B);         // C = a*B
-	Matrix Linspace(double a, double b, Index m, Index n);   // linear span
-	Matrix Logspace(double a, double b, Index m, Index n);   // logarithmic span
+	Matrix linSpace(double a, double b, Index m, Index n);   // linear span
+	Matrix logSpace(double a, double b, Index m, Index n);   // logarithmic span
 	Matrix Random(Index m, Index n);                         // Cij random in [0,1]
 	Matrix Eye(Index n);                                      // Cij = delta_i(j)
 	Matrix MatrixRead(const char *infile);                     // creates from input file
@@ -329,74 +331,10 @@ namespace PH {
 	//--- supplementary matrix-vector arithmetic routines ---
 
 	// standard matrix-vector product -> new vector (function form)
-	MathVector MatVec(const Matrix& A, const MathVector& v);
+	MathVector matrixVectorProduct(const Matrix& A, const MathVector& v);
 
-	// standard matrix-vector product -> new column vector
+	// standard matrix-vector product -> new vector
 	MathVector operator*(const Matrix& A, const MathVector& v);
-
-
-	//--- supplementary vector<double> vector-arithmetic routines ---
-
-	// output routine
-	int vecWrite(const MathVector&v, const char *outfile);
-
-	// inner product between two vectors
-	double dot(const MathVector& v1, const MathVector& v2);
-
-	// norms
-	double norm(const MathVector& v);      // sqrt(sum_i vi^2) (vector 2-norm)
-	double infNorm(const MathVector& v);   // max_i |vi|       (vector inf-norm)
-	double oneNorm(const MathVector& v);   // sum_i |vi|       (vector 1-norm)
-
-	// creates a vector of n linearly spaced values from a through b
-	MathVector linSpace(double a, double b, Index n);
-
-	// creates a vector of n logarithmically spaced values from 10^a through 10^b
-	MathVector logSpace(double a, double b, Index n);
-		   
-	// creates a vector of n uniformly-distributed random values
-	MathVector randomVector(Index n);
-
-	// output routines 
-	std::ostream& operator<<(std::ostream& os, const MathVector& v);
-
-	// extract/insert routines for portions of vectors
-	MathVector vecExtract(MathVector& x,       // y = x(is:ie)
-								   long int is, long int ie);
-	int vecInsert(MathVector& x, long int is,           // x(is:ie) = y
-				  long int ie, MathVector& y);
-
-	// arithmetic operators for MathVector
-	MathVector& operator+=(MathVector& v, const double c);
-	MathVector& operator+=(MathVector& v, const MathVector& w);
-
-	MathVector& operator-=(MathVector& v, const double c);
-	MathVector& operator-=(MathVector& v, const MathVector& w);
-
-	MathVector& operator*=(MathVector& v, const double c);
-	MathVector& operator*=(MathVector& v, const MathVector& w);
-
-	MathVector& operator/=(MathVector& v, const double c);
-	MathVector& operator/=(MathVector& v, const MathVector& w);
-
-	MathVector& operator^=(MathVector& v, const double c);
-	MathVector& operator^=(MathVector& v, const MathVector& w);
-
-	MathVector operator+(const MathVector& v, const double c);
-	MathVector operator+(const double c, const MathVector& v);
-	MathVector operator+(const MathVector& v, const MathVector& w);
-	MathVector operator-(const MathVector& v, const double c);
-	MathVector operator-(const double c, const MathVector& v);
-	MathVector operator-(const MathVector& v, const MathVector& w);
-	MathVector operator*(const MathVector& v, const double c);
-	MathVector operator*(const double c, const MathVector& v);
-	MathVector operator*(const MathVector& v, const MathVector& w);
-	MathVector operator/(const MathVector& v, const double c);
-	MathVector operator/(const double c, const MathVector& v);
-	MathVector operator/(const MathVector& v, const MathVector& w);
-	MathVector operator^(const MathVector& v, const double c);
-	MathVector operator^(const double c, const MathVector& v);
-	MathVector operator^(const MathVector& v, const MathVector& w);
 
 
 	//--- linear algebra routines ---

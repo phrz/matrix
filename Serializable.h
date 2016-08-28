@@ -11,13 +11,15 @@
 
 #include <iostream>
 
-class Serializable {
-public:
-	Serializable() {}
-	virtual Serializable() {}
-	
-	virtual void serialize(std::ostream& output) = 0;
-	virtual void deserialize(std::istream& input) = 0;
-};
+namespace PH {
+	class Serializable {
+	public:
+		Serializable() {}
+		virtual Serializable() {}
+		
+		virtual void serialize(std::ostream& output) = 0;
+		virtual void deserialize(std::istream& input) = 0;
+	};
+}
 
 #endif /* Serializable_h */
