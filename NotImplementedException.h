@@ -9,7 +9,7 @@
 #include <exception>
 
 class NotImplementedException: std::logic_error {
-	virtual char const* what() {
-		return "This function is not implemented.";
-	}
-}
+public:
+	NotImplementedException():
+		std::logic_error("This function is not implemented.") {}
+};

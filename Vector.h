@@ -6,26 +6,22 @@
 //  Copyright © 2016 Paul Herz. All rights reserved.
 //
 
-#ifndef Vector_hpp
-#define Vector_hpp
+#ifndef Vector_h
+#define Vector_h
 
+#include "PHMath.h"
 #include "Serializable.h"
 
 namespace PH {
 	
-	using  MathNumber = double;
-	using  Raw1DArray = std::vector<MathNumber>;
-	using  Raw2DArray = std::vector<MathVector>;
-	using       Index = std::size_t;
-	
-	class Vector: public Serializable {
+	class Vector: public Serializable<Vector> {
 	protected:
 		Raw1DArray _data;
 	public:
 		
 		// Serializable implementation
 		void serialize(std::ostream& output) const;
-		static Vector& deserialize(std::istream& input);
+		Vector& deserialize(std::istream& input);
 		
 		// inner product between two vectors
 		double dot(const MathVector& v1, const MathVector& v2);
@@ -85,7 +81,16 @@ namespace PH {
 		MathVector operator^(const double c, const MathVector& v);
 		MathVector operator^(const MathVector& v, const MathVector& w);
 		
-	};
-}
+	}; // class Vector
+	
+	//--- supplementary matrix-vector arithmetic routines ---
+	
+	// standard matrix-vector product -> new vector (function form)
+	Optional<Vector> matrixVectorProduct(const Matrix& A, const MathVector& v);
+	
+	// standard matrix-vector product -> new vector
+	Vector operator*(const Matrix& A, const MathVector& v);
+	
+} // namespace PH
 
 #endif /* Vector_h */

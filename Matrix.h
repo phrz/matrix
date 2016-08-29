@@ -21,8 +21,8 @@
  * @date 2016-08-26
  */
 
-#ifndef MATRIX_DEFINED__
-#define MATRIX_DEFINED__
+#ifndef Matrix_h
+#define Matrix_h
 
 // Inclusions
 #include <iostream>
@@ -32,22 +32,11 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
-#include "optional.h"
 
-// for accessing pi via M_PI
-#ifndef _USE_MATH_DEFINES
-#define _USE_MATH_DEFINES
-#include <cmath>
-#else
-#include <cmath>
-#endif
+#include "PHMath.h"
+#include "NotImplementedException.h"
 
 namespace PH {
-
-	using  MathNumber = double;
-	using  Raw1DArray = std::vector<MathNumber>;
-	using  Raw2DArray = std::vector<Raw1DArray>;
-	using       Index = std::size_t;
 
 	/**
 	 * @class Matrix
@@ -149,6 +138,10 @@ namespace PH {
 		
 		Raw1DArray& column(Index i);
 		Raw1DArray row(Index i);
+		Raw1DArray& operator[](Index i) {
+			// Removed
+			throw new NotImplementedException();
+		}
 		/// @}
 		// end of Row or Column Accessors
 		
@@ -292,68 +285,6 @@ namespace PH {
 		bool operator==(const Matrix& A) const;         // check for Matrix equality
 	};
 
-
-
-	//--- supplementary matrix arithmetic routines ---
-
-	double Dot(const Matrix& A, const Matrix& B);    // sum_ij (Cij * Aij)
-	double Norm(const Matrix& A);                    // sqrt(sum_ij Cij^2)
-	double InfNorm(const Matrix& A);                 // max_i sum_j |Cij|
-	double OneNorm(const Matrix& A);                 // max_j sum_i |Cij|
-
-
-
-	//--- new matrix creation routines (C is the output, A and B are the operands) ---
-
-	Matrix operator+(const Matrix& A, const Matrix &B);        // C = A+B
-	Matrix operator-(const Matrix& A, const Matrix &B);        // C = A-B
-	Matrix operator*(const Matrix& A, const Matrix &B);        // C = A*B
-	Matrix operator*(const Matrix& A, const double b);         // C = A*b
-	Matrix operator*(const double a, const Matrix& B);         // C = a*B
-	Matrix linSpace(double a, double b, Index m, Index n);   // linear span
-	Matrix logSpace(double a, double b, Index m, Index n);   // logarithmic span
-	Matrix randomMatrixOfSize(Index m, Index n);                         // Cij random in [0,1]
-	Matrix Eye(Index n);                                      // Cij = delta_i(j)
-	Matrix MatrixRead(const char *infile);                     // creates from input file
-	Matrix Inverse(const Matrix& A);                           // C = A^{-1}
-
-
-
-	//--- supplementary matrix-vector arithmetic routines ---
-
-	// standard matrix-vector product -> new vector (function form)
-	MathVector matrixVectorProduct(const Matrix& A, const MathVector& v);
-
-	// standard matrix-vector product -> new vector
-	MathVector operator*(const Matrix& A, const MathVector& v);
-
-
-	//--- linear algebra routines ---
-
-	// backward substitution on the linear system U*X = B, returning X as a new Matrix
-	//    U and B remain unchanged in this operation
-	std::optional<Matrix> backSubstitution(const Matrix& U, const Matrix& B);
-
-	// backward substitution on U*x = b, returning x as a new Vector
-	//    U and b remain unchanged in this operation
-	std::optional<Vector> backSubstitution(const Matrix& U, const Vector& b);
-
-	// forward substitution on the linear system L*X = B, returning X as a new Matrix
-	// L and B remain unchanged in this operation
-	std::optional<Matrix> forwardSubstitution(const Matrix& L, const Matrix& B);
-
-	// forward substitution on L*x = b, returning x as a new vector<double>
-	// L and b remain unchanged in this operation
-	std::optional<Vector> ForwardSubstitution(const Matrix& L, const Vector& b);
-
-	// solves a linear system A*X = B, returning X as a new Matrix
-	// A and B are modified in this operation; X holds the result
-	std::optional<Matrix> linearSolve(Matrix& A, Matrix& B);
-
-	// solves a linear system A*x = b, filling in the input vector<double> x
-	// A and b are modified in this operation; x holds the result
-	std::optional<Vector> linearSolve(Matrix& A, Vector& b);
-
 } // namespace PH
 
-#endif // MATRIX_DEFINED__
+#endif // Matrix_h

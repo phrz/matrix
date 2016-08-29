@@ -10,40 +10,41 @@
 #define Serializable_h
 
 #include <iostream>
+#include <exception>
 
 namespace PH {
+	
+	template<class SerialType>
 	class Serializable {
 	public:
 		Serializable() {}
-		virtual Serializable() {}
+		virtual ~Serializable() {}
 		
 		virtual void serialize(std::ostream& output) const = 0;
-		virtual static Serializable& deserialize(std::istream& input) = 0;
+		virtual SerialType& deserialize(std::istream& input) = 0;
 		
 		virtual void saveTo(const std::string& path) const {
-			ofstream file;
+			std::ofstream file;
 			file.open(path);
 			
 			if(not file.is_open()) {
-				throw new std::runtime_exception("Could not open file (". path .") to save to.");
+				throw new std::runtime_error("Could not open file (" + path + ") to save to.");
 			}
 			
 			serialize(file);
 			file.close();
 		}
 		
-		virtual static Serializable& loadFrom(const std::string& path) {
-			ifstream file;
+		virtual void loadFrom(const std::string& path) {
+			std::ifstream file;
 			file.open(path);
 			
 			if(not file.is_open()) {
-				throw new std::runtime_exception("Could not open file (". path .") to load from.");
+				throw new std::runtime_error("Could not open file (" + path + ") to load from.");
 			}
 			
-			Serializable object = deserialize(file);
+			this->deserialize(file);
 			file.close();
-			
-			return object;
 		}
 	};
 }

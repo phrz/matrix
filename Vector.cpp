@@ -27,21 +27,27 @@ namespace PH {
 	
 	
 	// standard matrix-vector product
-	MathVector matrixVectorProduct(const Matrix& A, const MathVector& v) {
-		MathVector res(A.rows(), 0.0);
+	Optional<Vector> matrixVectorProduct(const Matrix& A, const MathVector& v) {
+		Vector result(A.rows(), 0.0);
+		Optional<Vector> emptyResult;
+		
 		if (A.columns() != v.size()) {
 			cerr << "matrixVectorProduct: incompatible matrix/vector sizes in A*v\n";
+			return emptyResult;
 		} else {
-			for (Index i=0; i<A.rows(); i++)
-		  for (Index j=0; j<A.columns(); j++)
-			  res[i] += A(i,j)*v[j];
+			for (Index i = 0; i < A.rows(); i++) {
+				for (Index j = 0; j < A.columns(); j++) {
+					result[i] += A(i,j)*v[j];
+				}
+			}
 		}
-		return res;
+		return Optional<Vector>(result);
 	}
 	
 	
-	MathVector operator*(const Matrix& A, const MathVector& v) {
-		return matrixVectorProduct(A,v);
+	Vector operator*(const Matrix& A, const Vector& v) {
+		Optional<Vector> v = matrixVectorProduct(A,v);
+		return v::value(); // either returns value, or throws bad_optional_access.
 	}
 	
 	
