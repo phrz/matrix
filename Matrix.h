@@ -110,9 +110,20 @@ namespace PH {
 		 */
 		#pragma mark Iterators
 		
-		template<typename... ParameterTypes>
-		void mapColumns(void (*callback)(ParameterTypes...)) {
-			
+		void mapColumns(std::function<void(Raw1DArray&,Index)> callback) {
+			for(auto it = _data.begin(); it != _data.end(); ++it) {
+				Index i = it - _data.begin();
+				callback(*it, i);
+			}
+		}
+		
+		void mapElements(std::function<void(MathNumber&,Index,Index)> callback) {
+			mapColumns([callback](Raw1DArray& columnArray, Index c){
+				for(auto it = columnArray.begin(); it != columnArray.end(); ++it) {
+					Index r = it - columnArray.begin();
+					callback(*it, r, c);
+				}
+			});
 		}
 		/// @}
 		// end of Iterators

@@ -19,77 +19,82 @@ namespace PH {
 		Raw1DArray _data;
 	public:
 		
+		// size constructor, zero-fill
+		Vector(Index n);
+		
+		// size and custom fill constructor
+		Vector(Index n, MathNumber fill);
+		
 		// Serializable implementation
 		void serialize(std::ostream& output) const;
 		Vector& deserialize(std::istream& input);
 		
-		// inner product between two vectors
-		double dot(const MathVector& v1, const MathVector& v2);
+		void mapElements(std::function<void(MathNumber&,Index)> callback) {
+			for(auto it = _data.begin(); it != _data.end(); ++it) {
+				Index i = it - _data.begin();
+				callback(*it, i);
+			}
+		}
 		
-		// norms
-		double norm(const MathVector& v);      // sqrt(sum_i vi^2) (vector 2-norm)
-		double infNorm(const MathVector& v);   // max_i |vi|       (vector inf-norm)
-		double oneNorm(const MathVector& v);   // sum_i |vi|       (vector 1-norm)
+		MathNumber& operator[](const Index i) {
+			return _data[i];
+		}
 		
-		// creates a vector of n linearly spaced values from a through b
-		MathVector linSpace(double a, double b, Index n);
+		MathNumber operator[](const Index i) const {
+			return _data[i];
+		}
 		
-		// creates a vector of n logarithmically spaced values from 10^a through 10^b
-		MathVector logSpace(double a, double b, Index n);
-		
-		// creates a vector of n uniformly-distributed random values
-		MathVector randomVectorOfSize(Index n);
-		
-		// output routines
-		std::ostream& operator<<(std::ostream& os, const MathVector& v);
+		Index size() const {
+			return _data.size();
+		}
 		
 		// extract/insert routines for portions of vectors
-		MathVector vecExtract(MathVector& x,       // y = x(is:ie)
-							  long int is, long int ie);
-		int vecInsert(MathVector& x, long int is,           // x(is:ie) = y
-					  long int ie, MathVector& y);
+		// y = x(is:ie)
+		Vector range(Index begin, Index end);
+		
+		// v(begin:end) = source
+		void insert(Index begin, Index end, Vector& source);
 		
 		// arithmetic operators for MathVector
-		MathVector& operator+=(MathVector& v, const double c);
-		MathVector& operator+=(MathVector& v, const MathVector& w);
+		Vector& operator+=(const MathNumber addend);
+		Vector& operator+=(const Vector& addend);
 		
-		MathVector& operator-=(MathVector& v, const double c);
-		MathVector& operator-=(MathVector& v, const MathVector& w);
+		Vector& operator-=(const MathNumber subtrahend);
+		Vector& operator-=(const Vector& subtrahend);
 		
-		MathVector& operator*=(MathVector& v, const double c);
-		MathVector& operator*=(MathVector& v, const MathVector& w);
+		Vector& operator*=(const MathNumber c);
+		Vector& operator*=(const Vector& w);
 		
-		MathVector& operator/=(MathVector& v, const double c);
-		MathVector& operator/=(MathVector& v, const MathVector& w);
+		Vector& operator/=(const MathNumber divisor);
+		Vector& operator/=(const Vector& divisors);
 		
-		MathVector& operator^=(MathVector& v, const double c);
-		MathVector& operator^=(MathVector& v, const MathVector& w);
-		
-		MathVector operator+(const MathVector& v, const double c);
-		MathVector operator+(const double c, const MathVector& v);
-		MathVector operator+(const MathVector& v, const MathVector& w);
-		MathVector operator-(const MathVector& v, const double c);
-		MathVector operator-(const double c, const MathVector& v);
-		MathVector operator-(const MathVector& v, const MathVector& w);
-		MathVector operator*(const MathVector& v, const double c);
-		MathVector operator*(const double c, const MathVector& v);
-		MathVector operator*(const MathVector& v, const MathVector& w);
-		MathVector operator/(const MathVector& v, const double c);
-		MathVector operator/(const double c, const MathVector& v);
-		MathVector operator/(const MathVector& v, const MathVector& w);
-		MathVector operator^(const MathVector& v, const double c);
-		MathVector operator^(const double c, const MathVector& v);
-		MathVector operator^(const MathVector& v, const MathVector& w);
+		Vector& operator^=(const MathNumber exponent);
+		Vector& operator^=(const Vector& exponents);
 		
 	}; // class Vector
 	
-	//--- supplementary matrix-vector arithmetic routines ---
+	Vector operator+(const Vector& v, const MathNumber c);
+	Vector operator+(const MathNumber c, const Vector& v);
+	Vector operator+(const Vector& v, const Vector& w);
 	
-	// standard matrix-vector product -> new vector (function form)
-	Optional<Vector> matrixVectorProduct(const Matrix& A, const MathVector& v);
+	Vector operator-(const Vector& v, const double c);
+	Vector operator-(const MathNumber c, const Vector& v);
+	Vector operator-(const Vector& v, const Vector& w);
 	
-	// standard matrix-vector product -> new vector
-	Vector operator*(const Matrix& A, const MathVector& v);
+	Vector operator*(const Vector& v, const double c);
+	Vector operator*(const MathNumber c, const Vector& v);
+	Vector operator*(const Vector& v, const Vector& w);
+	
+	Vector operator/(const Vector& v, const double c);
+	Vector operator/(const MathNumber c, const Vector& v);
+	Vector operator/(const Vector& v, const Vector& w);
+	
+	Vector operator^(const Vector& v, const double c);
+	Vector operator^(const MathNumber c, const Vector& v);
+	Vector operator^(const Vector& v, const Vector& w);
+	
+	// output routines
+	std::ostream& operator<<(std::ostream& os, const Vector& v);
 	
 } // namespace PH
 

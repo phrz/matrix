@@ -18,68 +18,116 @@
 #endif
 
 #include <vector>
-#include "optional.h"
 
 using  MathNumber = double;
 using  Raw1DArray = std::vector<MathNumber>;
 using  Raw2DArray = std::vector<Raw1DArray>;
 using       Index = std::size_t;
 
-template<class T>
-using Optional = std::experimental::optional<T>;
-
 #include "Matrix.h"
 #include "Vector.h"
 
 namespace PH {
 	
-	//--- supplementary matrix arithmetic routines ---
+	// sqrt(sum_ij Cij^2)
+	double Norm(const Matrix& A);
+	// max_i sum_j |Cij|
+	double InfNorm(const Matrix& A);
 	
-	double Dot(const Matrix& A, const Matrix& B);    // sum_ij (Cij * Aij)
-	double Norm(const Matrix& A);                    // sqrt(sum_ij Cij^2)
-	double InfNorm(const Matrix& A);                 // max_i sum_j |Cij|
-	double OneNorm(const Matrix& A);                 // max_j sum_i |Cij|
+	// max_j sum_i |Cij|
+	double OneNorm(const Matrix& A);
 	
-	//--- new matrix creation routines (C is the output, A and B are the operands) ---
+	// C = A+B
+	Matrix operator+(const Matrix& A, const Matrix &B);
 	
-	Matrix operator+(const Matrix& A, const Matrix &B);        // C = A+B
-	Matrix operator-(const Matrix& A, const Matrix &B);        // C = A-B
-	Matrix operator*(const Matrix& A, const Matrix &B);        // C = A*B
-	Matrix operator*(const Matrix& A, const double b);         // C = A*b
-	Matrix operator*(const double a, const Matrix& B);         // C = a*B
-	Matrix linSpace(double a, double b, Index m, Index n);   // linear span
-	Matrix logSpace(double a, double b, Index m, Index n);   // logarithmic span
-	Matrix randomMatrixOfSize(Index m, Index n);                         // Cij random in [0,1]
-	Matrix Eye(Index n);                                      // Cij = delta_i(j)
-	Matrix MatrixRead(const char *infile);                     // creates from input file
-	Matrix Inverse(const Matrix& A);                           // C = A^{-1}
+	// C = A-B
+	Matrix operator-(const Matrix& A, const Matrix &B);
+	
+	// C = A*B
+	Matrix operator*(const Matrix& A, const Matrix &B);
+	
+	// C = A*b
+	Matrix operator*(const Matrix& A, const double b);
+	
+	// C = a*B
+	Matrix operator*(const double a, const Matrix& B);
+	
+	// linear span
+	Matrix linSpace(double a, double b, Index m, Index n);
+	
+	 // logarithmic span
+	Matrix logSpace(double a, double b, Index m, Index n);
+	
+	// Cij random in [0,1]
+	Matrix randomMatrixOfSize(Index m, Index n);
+	
+	// Cij = delta_i(j)
+	Matrix Eye(Index n);
+	
+	// creates from input file
+	Matrix MatrixRead(const char *infile);
+	
+	// C = A^{-1}
+	Matrix Inverse(const Matrix& A);
+	
+	// sum_ij (Cij * Aij)
+	MathNumber dotProduct(const Matrix& A, const Matrix& B);
+	
+	// inner product between two vectors
+	MathNumber dotProduct(const Vector& v1, const Vector& v2);
+	
+	/// sqrt(sum_i vi^2)    (vector 2-norm)
+	MathNumber norm(const Vector& v);
+	
+	/// max_i |vi|   (vector inf-norm)
+	MathNumber infNorm(const Vector& v);
+	
+	/// sum_i |vi|   (vector 1-norm)
+	MathNumber oneNorm(const Vector& v);
+	
+	// creates a vector of n linearly spaced values from a through b
+	Vector linSpace(double a, double b, Index n);
+	
+	// creates a vector of n logarithmically spaced values from 10^a through 10^b
+	Vector logSpace(double a, double b, Index n);
+	
+	// creates a vector of n uniformly-distributed random values
+	Vector randomVectorOfSize(Index n);
 	
 	
 	//--- linear algebra routines ---
 	
 	// backward substitution on the linear system U*X = B, returning X as a new Matrix
 	//    U and B remain unchanged in this operation
-	Optional<Matrix> backSubstitution(const Matrix& U, const Matrix& B);
+	Matrix backSubstitution(const Matrix& U, const Matrix& B);
 	
 	// backward substitution on U*x = b, returning x as a new Vector
 	//    U and b remain unchanged in this operation
-	Optional<Vector> backSubstitution(const Matrix& U, const Vector& b);
+	Vector backSubstitution(const Matrix& U, const Vector& b);
 	
 	// forward substitution on the linear system L*X = B, returning X as a new Matrix
 	// L and B remain unchanged in this operation
-	Optional<Matrix> forwardSubstitution(const Matrix& L, const Matrix& B);
+	Matrix forwardSubstitution(const Matrix& L, const Matrix& B);
 	
 	// forward substitution on L*x = b, returning x as a new vector<double>
 	// L and b remain unchanged in this operation
-	Optional<Vector> ForwardSubstitution(const Matrix& L, const Vector& b);
+	Vector ForwardSubstitution(const Matrix& L, const Vector& b);
 	
 	// solves a linear system A*X = B, returning X as a new Matrix
 	// A and B are modified in this operation; X holds the result
-	Optional<Matrix> linearSolve(Matrix& A, Matrix& B);
+	Matrix linearSolve(Matrix& A, Matrix& B);
 	
 	// solves a linear system A*x = b, filling in the input vector<double> x
 	// A and b are modified in this operation; x holds the result
-	Optional<Vector> linearSolve(Matrix& A, Vector& b);
+	Vector linearSolve(Matrix& A, Vector& b);
+	
+	//--- supplementary matrix-vector arithmetic routines ---
+	
+	// standard matrix-vector product -> new vector (function form)
+	Vector matrixVectorProduct(const Matrix& A, const Vector& v);
+	
+	// standard matrix-vector product -> new vector
+	Vector operator*(const Matrix& A, const Vector& v);
 	
 }
 

@@ -11,6 +11,14 @@
 
 namespace PH {
 	
+	Vector::Vector(Index n) {
+		_data = Raw1DArray(n);
+	}
+	
+	Vector::Vector(Index n, MathNumber fill) {
+		_data = Raw1DArray(n,fill);
+	}
+	
 	// Serializable interface
 	void Vector::serialize(std::ostream& output) const {
 		
@@ -26,99 +34,297 @@ namespace PH {
 	}
 	
 	
-	// standard matrix-vector product
-	Optional<Vector> matrixVectorProduct(const Matrix& A, const MathVector& v) {
-		Vector result(A.rows(), 0.0);
-		Optional<Vector> emptyResult;
+	// extract routine for portions of vectors, output = this(begin:end)
+	Vector Vector::range(Index begin, Index end) {
 		
-		if (A.columns() != v.size()) {
-			cerr << "matrixVectorProduct: incompatible matrix/vector sizes in A*v\n";
-			return emptyResult;
-		} else {
-			for (Index i = 0; i < A.rows(); i++) {
-				for (Index j = 0; j < A.columns(); j++) {
-					result[i] += A(i,j)*v[j];
-				}
-			}
+		// update start and end if any are negative
+		start = (start < 0) ? start+this->size() : start;
+		end = (start < 0) ? end+this->size() : end;
+		
+		if (source.size() != (end - begin + 1)) {
+			// Checking that source vector matches provided subvector range
+			throw new std::invalid_argument("insert: size mismatch, supplied vector has " + std::to_string(source.size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
+		} else if (begin < 0 || end < 0 || end >= this.size()) {
+			// Checking that range indices are legal
+			// (counting numbers, with end in bounds)
+			throw new std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
+		} else if (end < begin) {
+			// Checking that lower index is below upper index
+			// (no backwards ranges)
+			throw new std::invalid_argument("insert: requested subvector does not exist, upper index is below lower index: (" + std::to_string(begin) + ":" + std::to_string(end) + ")");
 		}
-		return Optional<Vector>(result);
-	}
-	
-	
-	Vector operator*(const Matrix& A, const Vector& v) {
-		Optional<Vector> v = matrixVectorProduct(A,v);
-		return v::value(); // either returns value, or throws bad_optional_access.
-	}
-	
-	
-	// inner product between two vectors
-	MathNumber dot(const MathVector& v1, const MathVector& v2) {
-		if (v1.size() != v2.size()) {
-			cerr << "Dot: incompatible vector sizes\n";
-			return 0.0;
+		
+		// create new vector of desired size
+		MathVector result(end - start + 1);
+		
+		// copy requested data
+		for (Index i = start; i <= end; i++) {
+			result[i-start] = _data[i];
 		}
-		MathNumber res = 0.0;
-		for (Index i=0; i<v2.size(); i++)  res += v1[i]*v2[i];
-		return res;
+		
+		return result;
 	}
 	
 	
-	// vector 2-norm
-	MathNumber norm(const MathVector& v) {
-		MathNumber sum=0.0;
-		for (Index i=0; i<v.size(); i++)  sum += v[i]*v[i];
-		return sqrt(sum);
+	// insert routine for portions of vectors, this(begin:end) = source
+	void Vector::insert(Index begin,
+				  Index end, Vector& source) {
+		
+		// update start and end if any are negative
+		begin = (begin < 0) ? begin + this->size() : begin;
+		end = (end < 0) ? end + this->size() : end;
+		
+		if (source.size() != (end - begin + 1)) {
+			// Checking that source vector matches provided subvector range
+			throw new std::invalid_argument("insert: size mismatch, supplied vector has " + std::to_string(source.size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
+		} else if (begin < 0 || end < 0 || end >= this.size()) {
+			// Checking that range indices are legal
+			// (counting numbers, with end in bounds)
+			throw new std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
+		} else if (end < begin) {
+			// Checking that lower index is below upper index
+			// (no backwards ranges)
+			throw new std::invalid_argument("insert: requested subvector does not exist, upper index is below lower index: (" + std::to_string(begin) + ":" + std::to_string(end) + ")");
+		}
+		
+		// perform operation
+		for (Index i = 0; i < source.size(); i++) {
+			_data[i + start] = source[i];
+		}
 	}
 	
 	
-	// vector infinity norm
-	MathNumber infNorm(const MathVector& v) {
-		MathNumber mx=0.0;
-		for (Index i=0; i<v.size(); i++)
-			mx = std::max(mx,std::abs(v[i]));
-		return mx;
+	// In place arithmetic operators (members)
+	#pragma mark In-Place Member Operators
+	
+	/// ADDITION
+	
+	/// In-place, constant (vector-by-number) addition.
+	MathVector& Vector::operator+=(const MathNumber addend) {
+		this->mapElements([addend](MathNumber& element, Index i) {
+			element += addend;
+		});
+		
+		return *this;
 	}
 	
-	
-	// vector one-norm
-	MathNumber oneNorm(const MathVector& v) {
-		MathNumber sum=0.0;
-		for (Index i=0; i<v.size(); i++)  sum += std::abs(v[i]);
-		return sum;
+	/// In-place, elementwise (vector-by-vector) addition
+	Vector& Vector::operator+=(const Vector& addends) {
+		if (this->size() != addends.size()) {
+			throw new std::invalid_argument("vector-by-vector addition: incompatible vector sizes.");
+		}
+		
+		this->mapElements([addends](MathNumber& element, Index i) {
+			element += addends[i];
+		});
+		
+		return *this;
 	}
 	
+	/// SUBTRACTION
 	
-	// create a new vector of linearly spaced data
-	MathVector linSpace(MathNumber a, MathNumber b, Index n) {
-		if (n<2) cerr << "Linspace::length must be > 1\n";
-		MathVector v(n);
-		MathNumber h = (b-a)/(n-1);
-		for (Index i=0; i<n; i++)
-			v[i] = a + i*h;
-		return v;
+	/// In-place, constant (vector-by-number) subtraction
+	Vector& Vector::operator-=(const MathNumber subtrahend) {
+		this->mapElements([subtrahend](MathNumber& element, Index i) {
+			element -= subtrahend;
+		});
+		
+		return *this;
 	}
 	
-	
-	// create a new vector of logarithmically spaced data
-	MathVector logSpace(MathNumber a, MathNumber b, Index n) {
-		if (n<2) cerr << "Logspace::length must be > 1\n";
-		MathVector v(n);
-		MathNumber h = (b-a)/(n-1);
-		for (Index i=0; i<n; i++)
-			v[i] = pow(10.0, a + i*h);
-		return v;
+	/// In-place, elementwise (vector-by-vector) subtraction
+	Vector& Vector::operator-=(const Vector& subtrahends) {
+		if (this->size() != subtrahends.size()) {
+			throw new std::invalid_argument("vector-by-vector subtraction: incompatible vector sizes.");
+		}
+		
+		this->mapElements([subtrahends](MathNumber& element, Index i) {
+			element -= subtrahends[i];
+		});
+		
+		return *this;
 	}
 	
+	/// MULTIPLICATION
 	
-	// create a new vector with uniformly-distributed random numbers in [0,1]
-	MathVector randomVectorOfSize(Index n) {
-		if (n<1) cerr << "Random::length must be > 0\n";
-		MathVector v(n);
-		for (Index i=0; i<n; i++)
-			v[i] = random() / (pow(2.0,31.0) - 1.0);
-		return v;
+	/// In-place, constant (vector-by-number) multiplication
+	Vector& Vector::operator*=(const MathNumber multiplier) {
+		this->mapElements([multiplier](MathNumber& element, Index i) {
+			element *= multiplier;
+		});
+		
+		return *this;
 	}
 	
+	/// In-place, elementwise (vector-by-vector) multiplication
+	Vector& Vector::operator*=(const MathVector& multipliers) {
+		if (this->size() != multipliers.size()) {
+			throw new std::invalid_argument("vector-by-vector multiplication: incompatible vector sizes.");
+		}
+
+		this->mapElements([multipliers](MathNumber& element, Index i) {
+			element *= multipliers[i];
+		});
+		
+		return *this;
+	}
+	
+	/// DIVISION
+	
+	/// In-place, constant (vector-by-number) division
+	Vector& Vector::operator/=(const MathNumber divisor) {
+		this->mapElements([divisor](MathNumber& element, Index i) {
+			element /= divisor;
+		});
+		
+		return *this;
+	}
+	
+	/// In-place, elementwise (vector-by-vector) division
+	Vector& Vector::operator/=(const Vector& divisors) {
+		if (this->size() != divisors.size()) {
+			throw new std::invalid_argument("vector-by-vector division: incompatible vector sizes.");
+		}
+		
+		this->mapElements([divisors](MathNumber& element, Index i) {
+			element /= divisors[i];
+		});
+		
+		return *this;
+	}
+	
+	/// EXPONENTIATION
+	
+	/// In-place, constant (vector-by-number) exponentiation
+	Vector& Vector::operator^=(const MathNumber exponent) {
+		this->mapElements([exponent](MathNumber& element, Index i) {
+			element = std::pow(element, exponent);
+		});
+		
+		return *this;
+	}
+	
+	/// In-place, elementwise (vector-by-vector) exponentiation
+	MathVector& Vector::operator^=(const Vector& exponents) {
+		if (this->size() != exponents.size()) {
+			throw new std::invalid_argument("vector-by-vector exponentiation: incompatible vector sizes.");
+		}
+		
+		this->mapElements([exponents](MathNumber& element, Index i){
+			element = std::pow(element, exponents[i]);
+		});
+		
+		return *this;
+	}
+	
+	#pragma mark Functional Operators
+	
+	// Result = Vector + Constant
+	Vector operator+(const Vector& vector, const MathNumber constant) {
+		Vector result = vector;
+		result += constant;
+		return result;
+	}
+	
+	// Result = Constant + Vector
+	Vector operator+(const MathNumber constant, const Vector& vector) {
+		return vector + constant; // commutative
+	}
+	
+	// Result = Vector + Vector
+	Vector operator+(const Vector& vector1, const Vector& vector2) {
+		Vector result = vector1;
+		result += vector2;
+		return result;
+	}
+	
+	// Result = Vector - Constant
+	Vector operator-(const Vector& vector, const MathNumber constant) {
+		Vector result = vector;
+		result -= constant;
+		return result;
+	}
+	
+	// Result = Constant - Vector
+	Vector operator-(const MathNumber constant, const Vector& vector) {
+		Vector result = vector;
+		result.mapElements([constant](MathNumber& element, Index i){
+			element = constant - element;
+		});
+		return result;
+	}
+	
+	// Result = Vector - Vector
+	Vector operator-(const Vector& vector1, const Vector& vector2) {
+		Vector result = vector1;
+		result -= vector2;
+		return result;
+	}
+	
+	// Result = Vector * Constant
+	Vector operator*(const Vector& vector, const MathNumber constant) {
+		Vector result = vector;
+		result *= constant;
+		return result;
+	}
+	
+	// Result = Constant * Vector
+	Vector operator*(const MathNumber constant, const Vector& vector) {
+		return vector * constant; // commutative
+	}
+	
+	// Result = Vector * Vector
+	Vector operator*(const Vector& vector1, const Vector& vector2) {
+		Vector result = vector1;
+		vector1 *= vector2;
+		return result;
+	}
+	
+	// Result = Vector / Constant
+	Vector operator/(const Vector& vector, const MathNumber constant) {
+		Vector result = vector1;
+		result /= constant;
+		return result;
+	}
+	
+	// Result = Constant / Vector
+	Vector operator/(const MathNumber constant, const Vector& vector) {
+		Vector result = vector;
+		result.mapElements([constant](MathNumber& element, Index i){
+			element = constant / element;
+		});
+		return result;
+	}
+	
+	// Result = Vector / Vector
+	Vector operator/(const Vector& vector1, const Vector& vector2) {
+		MathVector result = vector1;
+		result /= vector2;
+		return result;
+	}
+	
+	// Result = Vector ^ Constant
+	Vector operator^(const Vector& vector, const MathNumber constant) {
+		Vector result = vector
+		result ^= constant;
+		return result;
+	}
+	
+	// Result = Constant ^ Vector
+	Vector operator^(const MathNumber constant, const MathVector& vector) {
+		Vector result = vector;
+		result.mapElements([constant](MathNumber& element, Index i){
+			element = std::pow(constant, element);
+		});
+		return result;
+	}
+	
+	// Result = Vector ^ Vector
+	Vector operator^(const Vector& vector1, const Vector& vector2) {
+		Vector result = vector1;
+		result ^= vector2;
+		return result;
+	}
 	
 	// streaming output routine
 	ostream& operator<<(ostream& os, const MathVector& v) {
@@ -126,308 +332,6 @@ namespace PH {
 			os << "  " << v[i];
 		os << "\n";
 		return os;
-	}
-	
-	
-	// extract routine for portions of vectors, y = x(is:ie)
-	MathVector VecExtract(MathVector& x,
-						  long int is, long int ie) {
-		
-		// update is,ie,js,je if any are negative
-		is = (is < 0) ? is+x.size() : is;
-		ie = (ie < 0) ? ie+x.size() : ie;
-		
-		// check that requested subvector exists
-		if (is < 0 || is >= x.size()) {
-			cerr << "VecExtract error, requested submatrix does not exist\n";
-			cerr << "  illegal is = " << is << " (vector has " << x.size() << " entries)\n";
-		}
-		if (ie < 0 || ie >= x.size()) {
-			cerr << "VecExtract error, requested submatrix does not exist\n";
-			cerr << "  illegal ie = " << ie << " (matrix has " << x.size() << " entries)\n";
-		}
-		if (ie < is) {
-			cerr << "VecExtract error, requested submatrix does not exist\n";
-			cerr << "  upper index is below lower index: is = " << is << ", ie = "
-		 << ie << endl;
-		}
-		
-		// create new vector of desired size
-		MathVector y(ie-is+1);
-		
-		// copy requested data
-		for (Index i=is; i<=ie; i++)
-			y[i-is] = x[i];
-		
-		// return object
-		return y;
-	}
-	
-	
-	// insert routine for portions of vectors, x(is:ie) = y
-	int VecInsert(MathVector& x, long int is,
-				  long int ie, MathVector& y) {
-		
-		// update is,ie if any are negative
-		is = (is < 0) ? is+x.size() : is;
-		ie = (ie < 0) ? ie+x.size() : ie;
-		
-		// check that array sizes match
-		if (y.size() != (ie-is+1)) {
-			cerr << "VecInsert error, size mismatch\n    supplied vector has " << y.size()
-			<< " entries, but requested subvector has " << ie-is+1 << " entries\n";
-			return 1;
-		}
-		// check for valid subvector
-		if (is < 0 || is >= x.size()) {
-			cerr << "VecInsert error, requested subvector does not exist\n";
-			cerr << "  illegal is = " << is << " (vector has " << x.size() << " entries)\n";
-			return 1;
-		}
-		if (ie < 0 || ie >= x.size()) {
-			cerr << "VecInsert error, requested subvector does not exist\n";
-			cerr << "  illegal ie = " << ie << " (vector has " << x.size() << " entries)\n";
-			return 1;
-		}
-		if (ie < is) {
-			cerr << "VecInsert error, requested submatrix does not exist\n";
-			cerr << "  upper index is below lower index: is = " << is << ", ie = "
-		 << ie << endl;
-			return 1;
-		}
-		
-		// perform operation
-		for (Index i=0; i<y.size(); i++)
-			x[i+is] = y[i];
-		
-		// return success
-		return 0;
-	}
-	
-	
-	// arithmetic operators
-	MathVector& operator+=(MathVector& v, const MathNumber c) {
-		for (Index i=0; i<v.size(); i++)
-			v[i] += c;
-		return v;
-	}
-	
-	
-	MathVector& operator+=(MathVector& v, const MathVector& w) {
-		if (v.size() != w.size())
-			cerr << "MathVector += error: incompatible vector sizes!";
-		else
-			for (Index i=0; i<v.size(); i++)
-		  v[i] += w[i];
-		return v;
-	}
-	
-	
-	MathVector& operator-=(MathVector& v, const MathNumber c) {
-		for (Index i=0; i<v.size(); i++)
-			v[i] -= c;
-		return v;
-	}
-	
-	
-	MathVector& operator-=(MathVector& v, const MathVector& w) {
-		if (v.size() != w.size())
-			cerr << "MathVector -= error: incompatible vector sizes!";
-		else
-			for (Index i=0; i<v.size(); i++)
-		  v[i] -= w[i];
-		return v;
-	}
-	
-	
-	MathVector& operator*=(MathVector& v, const MathNumber c) {
-		for (Index i=0; i<v.size(); i++)
-			v[i] *= c;
-		return v;
-	}
-	
-	
-	MathVector& operator*=(MathVector& v, const MathVector& w) {
-		if (v.size() != w.size())
-			cerr << "MathVector *= error: incompatible vector sizes!";
-		else
-			for (Index i=0; i<v.size(); i++)
-		  v[i] *= w[i];
-		return v;
-	}
-	
-	
-	MathVector& operator/=(MathVector& v, const MathNumber c) {
-		for (Index i=0; i<v.size(); i++)
-			v[i] /= c;
-		return v;
-	}
-	
-	
-	MathVector& operator/=(MathVector& v, const MathVector& w) {
-		if (v.size() != w.size())
-			cerr << "MathVector /= error: incompatible vector sizes!";
-		else
-			for (Index i=0; i<v.size(); i++)
-		  v[i] /= w[i];
-		return v;
-	}
-	
-	
-	MathVector& operator^=(MathVector& v, const MathNumber c) {
-		for (Index i=0; i<v.size(); i++)
-			v[i] = pow(v[i], c);
-		return v;
-	}
-	
-	
-	MathVector& operator^=(MathVector& v, const MathVector& w) {
-		if (v.size() != w.size())
-			cerr << "MathVector /= error: incompatible vector sizes!";
-		else
-			for (Index i=0; i<v.size(); i++)
-		  v[i] = pow(v[i], w[i]);
-		return v;
-	}
-	
-	
-	MathVector operator+(const MathVector& v, const MathNumber c) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] + c;
-		return x;
-	}
-	
-	
-	MathVector operator+(const MathNumber c, const MathVector& v) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] + c;
-		return x;
-	}
-	
-	
-	MathVector operator+(const MathVector& v, const MathVector& w) {
-		if (v.size() != w.size()) {
-			cerr << "MathVector + error: incompatible vector sizes!";
-			return MathVector(0);
-		}
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] + w[i];
-		return x;
-	}
-	
-	
-	MathVector operator-(const MathVector& v, const MathNumber c) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] - c;
-		return x;
-	}
-	
-	
-	MathVector operator-(const MathNumber c, const MathVector& v) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = c - v[i];
-		return x;
-	}
-	
-	
-	MathVector operator-(const MathVector& v, const MathVector& w) {
-		if (v.size() != w.size()) {
-			cerr << "MathVector - error: incompatible vector sizes!";
-			return MathVector(0);
-		}
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] - w[i];
-		return x;
-	}
-	
-	
-	MathVector operator*(const MathVector& v, const MathNumber c) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] * c;
-		return x;
-	}
-	
-	
-	MathVector operator*(const MathNumber c, const MathVector& v) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] * c;
-		return x;
-	}
-	
-	
-	MathVector operator*(const MathVector& v, const MathVector& w) {
-		if (v.size() != w.size()) {
-			cerr << "MathVector * error: incompatible vector sizes!";
-			return MathVector(0);
-		}
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] * w[i];
-		return x;
-	}
-	
-	
-	MathVector operator/(const MathVector& v, const MathNumber c) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] / c;
-		return x;
-	}
-	
-	
-	MathVector operator/(const MathNumber c, const MathVector& v) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = c / v[i];
-		return x;
-	}
-	
-	
-	MathVector operator/(const MathVector& v, const MathVector& w) {
-		if (v.size() != w.size()) {
-			cerr << "MathVector / error: incompatible vector sizes!";
-			return MathVector(0);
-		}
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = v[i] / w[i];
-		return x;
-	}
-	
-	
-	MathVector operator^(const MathVector& v, const MathNumber c) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = pow(v[i], c);
-		return x;
-	}
-	
-	
-	MathVector operator^(const MathNumber c, const MathVector& v) {
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = pow(c, v[i]);
-		return x;
-	}
-	
-	
-	MathVector operator^(const MathVector& v, const MathVector& w) {
-		if (v.size() != w.size()) {
-			cerr << "MathVector ^ error: incompatible vector sizes!";
-			return MathVector(0);
-		}
-		MathVector x(v.size());
-		for (Index i=0; i<v.size(); i++)
-			x[i] = pow(v[i], w[i]);
-		return x;
 	}
 	
 } // namespace PH
