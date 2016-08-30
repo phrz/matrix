@@ -16,8 +16,8 @@ namespace PH {
 	
 	template<int r, int c>
 	static Matrix& Matrix::fromArray(Raw1DArray source) {
-		if (r*c != source.size()) {
-			cerr << "Matrix constructor error: incompatible shape with vector length\n";
+		if (r * c != source.size()) {
+			throw new std::invalid_argument("Matrix::fromArray: the given array could not properly fit into the requested matrix dimensions.");
 		}
 		
 		this->resize(r,c);
@@ -38,7 +38,7 @@ namespace PH {
 		
 		for (Index column = 0; column < _columnCount; column++) {
 			if (source[column].size() != _rows) {
-				cerr << "Matrix constructor error: rows in 2D vector must have the same length\n";
+				throw new std::invalid_argument("Matrix Raw2DArray constructor: rows in the 2D array must have identical length.");
 			}
 			
 			for (Index row = 0; row < _rows; row++) {
@@ -177,99 +177,87 @@ namespace PH {
 	ostream& operator<<(ostream& os, const Matrix& A) {
 		os << this->str();
 	}
+	
+	# pragma mark In-Place Member Operations
 
-
-	///// Arithmetic operations defined on a given Mat
-
-	// C = A*X
-	int Matrix::Product(const Matrix& A, const Matrix& X) {
-
-	  // check that array sizes match
-	  if (A._rows != _rows || A._columnCount != X._rows || X._columnCount != _columnCount) {
-		cerr << "Matrix::Product error, matrix size mismatch\n";
-		cerr << "  Matrix 1 is " << A._rows << " x " << A._columnCount 
-		 << "  Matrix 2 is " << X._rows << " x " << X._columnCount 
-		 << ", output is " << _rows << " x " << _columnCount << endl;
-		return 1;
-	  }
-	  
-	  // perform operation
-	  this->Constant(0.0);
-	  for (Index k=0; k<_columnCount; k++) 
-		for (Index j=0; j<A.columns(); j++)
-		  for (Index i=0; i<A.rows(); i++) 
-		(*this)(i,k) += A(i,j)*X(j,k);
+	// A = (a*A) + (b*B)
+	Matrix& Matrix::linearSumInPlace(MathNumber matrix1Constant, MathNumber matrix2Constant, const Matrix& matrix2) {
+		// check that array sizes match
+		if (this.dimensions() == matrix2.dimensions()) {
+			throw new std::invalid_argument("matrix-by-matrix linear sum (a*A+b*B): incompatible matrix dimensions (must be same)");
+		}
 		
-	  // return success
-	  return 0;
-
+		mapElements([](MathNumber& matrix1Element, Index row, Index column) {
+			matrix1Element *= matrix1Constant;
+			// fused multiply-add operation ($0 * $1) + $2
+			// usually handled in one operation on a modern processor.
+			matrix1Element = std::fma(matrix2Constant, matrix2(row, column), matrix1Element);
+		});
+		
+		return *this;
 	}
 
-
-	// C = a*A + b*B
-	int Matrix::LinearSum(MathNumber a, const Matrix& A, MathNumber b, const Matrix& B) {
-
-	  // check that array sizes match
-	  if (A._rows != _rows || A._columnCount != _columnCount || 
-		  B._rows != _rows || B._columnCount != _columnCount) {
-		cerr << "Matrix::LinearSum error, matrix size mismatch\n";
-		cerr << "  Matrix 1 is " << _rows << " x " << _columnCount 
-		 << ",  Matrix 2 is " << A._rows << " x " << A._columnCount 
-		 << ",  Matrix 3 is " << B._rows << " x " << B._columnCount << endl;
-		return 1;
-	  }
-	  
-	  // perform operation
-	  for (Index j=0; j<B._columnCount; j++)
-		for (Index i=0; i<B._rows; i++)
-		  _data[j][i] = a*A._data[j][i] + b*B._data[j][i];
-	  
-	  // return success
-	  return 0;
+	
+	// ADDITION
+	
+	Matrix& Matrix::operator+=(const MathNumber constant) {
+		mapElements([constant](MathNumber& element, Index row, Index column) {
+			element += constant;
+		});
+		
+		return *this;
 	}
-
-	// C = C+a  (adds scalar a to my data)
-	int Matrix::Add(MathNumber a) {
-	  for (Index j=0; j<_columnCount; j++)
-		for (Index i=0; i<_rows; i++)
-		  _data[j][i] += a;
-	  return 0;
+	
+	Matrix& Matrix::operator+=(const Matrix& matrix) {
+		linearSumInPlace(1.0, 1.0, matrix);
+		
+		return *this;
 	}
-
-	// C = C.*A (component-wise multiply of my data by A)
-	int Matrix::Multiply(const Matrix& A) {
-
-	  // check that array sizes match
-	  if (A._rows != _rows || A._columnCount != _columnCount) {
-		cerr << "Matrix::Multiply error, matrix size mismatch\n";
-		cerr << "  Matrix 1 is " << _rows << " x " << _columnCount 
-		 << ",  Matrix 2 is " << A._rows << " x " << A._columnCount << endl;
-		return 1;
-	  }
-	  
-	  // perform operation
-	  for (Index j=0; j<A._columnCount; j++)
-		for (Index i=0; i<A._rows; i++)
-		  _data[j][i] *= A._data[j][i];
-	  
-	  // return success
-	  return 0;
+	
+	
+	// SUBTRACTION
+	
+	Matrix& Matrix::operator-=(const MathNumber constant) {
+		this += -constant;
+		return *this;
 	}
-
-	// C = a*C  (scales my data by scalar a)
-	int Matrix::Multiply(MathNumber a) {
-
-	  // perform operation
-	  for (Index j=0; j<_columnCount; j++)
-		for (Index i=0; i<_rows; i++)
-		  _data[j][i] *= a;
-	  
-	  // return success
-	  return 0;
+	
+	Matrix& Matrix::operator-=(const Matrix& matrix) {
+		linearSumInPlace(1.0, -1.0, matrix);
+		
+		return *this;
 	}
+	
+	
+	// MULTIPLICATION
+	
+	Matrix& Matrix::elementwiseMultiply(const Matrix& other) {
+		// check that array sizes match
+		if (this.dimensions() != other.dimensions()) {
+			throw new std::invalid_argument("elementwise matrix multiplication (A.*B): incompatible matrix dimensions (must be same)");
+		}
 
-	// C = C./A (component-wise division of my data by A)
-	int Matrix::Divide(const Matrix& A) {
+		// perform operation
+		mapElements([other](MathNumber& element, Index row, Index column) {
+			element *= other(row, column);
+		});
+
+		return *this;
+	}
+	
+	Matrix& Matrix::operator*=(const MathNumber constant) {
+		// perform operation
+		mapElements([constant](MathNumber& element, Index row, Index column) {
+			element *= constant;
+		});
+
+		return *this;
+	}
+	
+	
+	// DIVISION
+	
+	Matrix& Matrix::elementwiseDivide(const Matrix& other) {
 
 	  // check that array sizes match
 	  if (A._rows != _rows || A._columnCount != _columnCount) {
@@ -501,20 +489,53 @@ namespace PH {
 		  mx = std::max( mx, _data[j][i] );
 	  return mx;
 	}
-
-	// equivalence-checking operator
-	bool Matrix::operator==(const Matrix& A) const {
-
-	  // quick check for compatible sizes
-	  if (A._rows != _rows || A._columnCount != _columnCount)
-		return false;
-
-	  // detailed check on values
-	  bool equal = true;
-	  for (Index j=0; j<_columnCount; j++)  
-		for (Index i=0; i<_rows; i++)
+	
+	# pragma mark Functional Operators
+	
+	/// Result = Matrix * Matrix
+	Matrix operator*(const Matrix& matrix1, const Matrix& matrix2) {
+		
+		// if A has (X rows, Y cols) and B has (Y rows, Z cols),
+		// they can be multiplied, producing a matrix of size
+		// (X rows, Z cols)
+		
+		if (matrix1.columns() != matrix2.rows()) {
+			throw new std::invalid_argument("matrix-by-matrix multiplication: incompatible matrix dimensions (inner dimensions must be same, A*B requires A's columns to be the same as B's rows)");
+		}
+		
+		// perform operation
+		Matrix result = Matrix(matrix1.rows(), matrix2.columns());
+		
+		for (Index k = 0; k< matrix2.columns(); ++k) {
+			for (Index j = 0; j < matrix1.columns(); ++j) {
+				for (Index i = 0; i < matrix1.rows(); ++i) {
+					(*this)(i,k) += A(i,j)*X(j,k);
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	
+	bool operator==(const Matrix& lhs, const Matrix& rhs) {
+		
+		if (lhs.dimensions() != rhs.dimensions()) {
+			return false;
+		}
+		
+		// assume equality, disprove with single unequal element
+		bool isEqual = true;
+		
+		lhs.mapElements([](){
+		
+		});
+		
+		for (Index j=0; j<_columnCount; j++)
+			for (Index i=0; i<_rows; i++)
 		  equal &= (A._data[j][i] == _data[j][i]);
-	  return equal;
+		
+		return isEqual;
 	}
 	
 } // namespace PH

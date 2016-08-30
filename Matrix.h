@@ -37,6 +37,20 @@
 #include "NotImplementedException.h"
 
 namespace PH {
+	
+	struct Dimensions {
+		Index rows;
+		Index columns;
+		
+		Dimensions(Index r, Index c): rows(r), columns(c) {}
+		bool operator==(const Dimensions& rhs) const {
+			return (this->rows==rhs.rows)
+			&& (this->columns==rhs.columns);
+		}
+		bool operator!=(const Dimensions& rhs) const {
+			return !(*this==rhs);
+		}
+	};
 
 	/**
 	 * @class Matrix
@@ -138,6 +152,9 @@ namespace PH {
 		Index const size() const { return _rowCount * _columnCount; }
 		Index const& rows() const { return _rowCount; }
 		Index const& columns() const { return _columnCount; }
+		Dimensions const dimensions() const {
+			return Dimensions(_rowCount, _columnCount);
+		}
 		/// @}
 		// end of Dimension Accessors
 
@@ -188,38 +205,27 @@ namespace PH {
 		
 		
 		/** @defgroup In-place operations
-			C is the matrix calling the routine, i.e. C = A*X is C.Product(A,X)
-			zero is success, 1 is failure.
 			@{
 		 */
 		#pragma mark In-place operations
 		
-		/// C = A*X
-		int Product(const Matrix& A, const Matrix& X);
-		
 		/// C = a*A + b*B
-		int LinearSum(MathNumber a, const Matrix& A, MathNumber b, const Matrix& B);
+		Matrix& linearSumInPlace(MathNumber matrix1Constant, MathNumber b, const Matrix& B);
 		
-		/// C = C+A
-		int Add(const Matrix& A) { return LinearSum(1.0,*this,1.0,A); };
+		Matrix& operator+=(const MathNumber constant);
+		Matrix& operator+=(const Matrix& matrix);
 		
-		/// C = C+a
-		int Add(MathNumber a);
-		
-		/// C = C-A
-		int Subtract(const Matrix& A) { return LinearSum(1.0,*this,-1.0,A); };
-		
-		/// C = C-a
-		int Subtract(MathNumber a) { return Add(-a); };
+		Matrix& operator-=(const MathNumber constant);
+		Matrix& operator-=(const Matrix& matrix);
 		
 		/// C = C.*A
-		int Multiply(const Matrix& A);
+		Matrix& elementwiseMultiply(const Matrix& other);
 		
 		/// C = a*C
-		int Multiply(MathNumber a);
+		Matrix operator*=(const MathNumber a);
 		
 		/// C = C./A
-		int Divide(const Matrix& A);
+		Matrix& elementwiseDivide(const Matrix& A);
 		
 		/// C(is:ie,js:je) = A
 		int Insert(const Matrix& A, long int is, long int ie,
@@ -242,49 +248,6 @@ namespace PH {
 		/// @}
 		// end of In-place operations
 		
-		
-		/** @defgroup In-place operation aliases
-			C is the matrix calling the routine, i.e. C = A*X is C.Product(A,X)
-			zero is success, 1 is failure.
-			@{
-		 */
-		#pragma mark In-place operation aliases
-		
-		/// C = C+A
-		int operator+=(const Matrix& A) {
-			return Add(A);
-		}
-		
-		/// C = C+a (add a to all entries)
-		int operator+=(double a)        { return Add(a); }
-		
-		/// C = C-A
-		int operator-=(const Matrix& A) { return Subtract(A); }
-		
-		/// C = C-a (add -a to all entries)
-		int operator-=(double a)        { return Subtract(a); };
-		
-		/// C = C.*A (componentwise multiply)
-		int operator*=(const Matrix& A) { return Multiply(A); };
-		
-		/// C = a*C
-		int operator*=(double a)        { return Multiply(a); };
-		
-		/// C = C./A (componentwise divide)
-		int operator/=(const Matrix& A) { return Divide(A); };
-		
-		/// C = (1/a)*C
-		int operator/=(double a)        { return Multiply(1.0/a); };
-		
-		/// C = C.^p (componentwise power)
-		int operator^=(double p)        { return Power(p); };
-		
-		/// C = a (all entries equal a)
-		int operator=(double a)         { return Constant(a); };
-		/// @}
-		// end of In-place operation aliases
-		
-		
 		// derived matrix creation operations (C is the output, A calls the operation)
 		Matrix T();                                              // C = A^T
 		Matrix Extract(long int is, long int ie,                 // C = A(is:ie,js:je)
@@ -293,8 +256,14 @@ namespace PH {
 		// Scalar output operators on matrices
 		double Min() const;                             // min_ij Cij
 		double Max() const;                             // min_ij Cij
-		bool operator==(const Matrix& A) const;         // check for Matrix equality
-	};
+		
+	}; // class Matrix
+	
+	# pragma mark Functional Operators
+	
+	Matrix operator*(const Matrix& matrix1, const Matrix& matrix2);
+	
+	bool operator==(const Matrix& lhs, const Matrix& rhs);
 
 } // namespace PH
 

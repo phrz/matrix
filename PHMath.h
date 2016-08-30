@@ -36,22 +36,7 @@ namespace PH {
 	
 	// max_j sum_i |Cij|
 	double OneNorm(const Matrix& A);
-	
-	// C = A+B
-	Matrix operator+(const Matrix& A, const Matrix &B);
-	
-	// C = A-B
-	Matrix operator-(const Matrix& A, const Matrix &B);
-	
-	// C = A*B
-	Matrix operator*(const Matrix& A, const Matrix &B);
-	
-	// C = A*b
-	Matrix operator*(const Matrix& A, const double b);
-	
-	// C = a*B
-	Matrix operator*(const double a, const Matrix& B);
-	
+		
 	// linear span
 	Matrix linSpace(double a, double b, Index m, Index n);
 	

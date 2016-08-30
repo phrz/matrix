@@ -52,11 +52,8 @@ namespace PH {
 	Matrix operator+(const Matrix& A, const Matrix& B) {
 		
 		// check that array sizes match
-		if (B.rows() != A.rows() || B.columns() != A.columns()) {
-			cerr << "Matrix operator+ error, matrix size mismatch\n";
-			cerr << "  Matrix 1 is " << A.rows() << " x " << A.columns()
-			<< ",  Matrix 2 is " << B.rows() << " x " << B.columns() << endl;
-			return Matrix(0,0);
+		if (A.dimensions() != B.dimensions()) {
+			throw new std::invalid_argument("matrix-by-matrix addition: incompatible matrix dimensions (must be same)");
 		}
 		
 		// create new Mat for output, and do operation
@@ -73,7 +70,7 @@ namespace PH {
 	Matrix operator-(const Matrix& A, const Matrix& B) {
 		
 		// check that array sizes match
-		if (B.rows() != A.rows() || B.columns() != A.columns()) {
+		if (A.dimensions() != B.dimensions()) {
 			cerr << "Matrix operator- error, matrix size mismatch\n";
 			cerr << "  Matrix 1 is " << A.rows() << " x " << A.columns()
 			<< ",  Matrix 2 is " << B.rows() << " x " << B.columns() << endl;
@@ -528,7 +525,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (A.rows() != b.size() or not A.isSquare()) {
-			throw new std::invalid_argument("linearSolve:  size mismatch between matrix and vector.");
+			throw new std::invalid_argument("linearSolve: size mismatch between matrix and vector.");
 		}
 		
 		// create temporary variables
@@ -562,7 +559,7 @@ namespace PH {
 			
 			// check for nonzero matrix diagonal
 			if (std::abs(A._data[k][k]) < STOL * Amax) {
-				throw new std::invalid_argument("linearSolve:  numerically singular matrix.");
+				throw new std::invalid_argument("linearSolve: numerically singular matrix.");
 			}
 			
 			// perform elimination using row k
@@ -587,7 +584,7 @@ namespace PH {
 		// check for singularity at end (only need to check final
 		// diagonal entry)
 		if (std::abs(A._data[A.rows() - 1][A.rows() - 1]) < STOL * Amax) {
-			throw new std::invalid_argument("linearSolve:  numerically singular matrix.");
+			throw new std::invalid_argument("linearSolve: numerically singular matrix.");
 		}
 		
 		// perform Backward Substitution on result
