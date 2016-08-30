@@ -978,4 +978,28 @@ namespace PH {
 		return true;
 	}
 	
+	
+	// Result = Matrix - Constant
+	Matrix operator-(const Matrix& matrix, const MathNumber constant) {
+		Matrix result = matrix;
+		result -= constant;
+		return result;
+	}
+	
+	// Result = Constant - Matrix
+	Matrix operator-(const MathNumber constant, const Matrix& matrix) {
+		Matrix result = matrix;
+		result.mapElements([&constant](MathNumber& element, Index r, Index c){
+			element = constant - element;
+		});
+		return result;
+	}
+	
+	// Result = Matrix - Matrix
+	Matrix operator-(const Matrix& matrix1, const Matrix& matrix2) {
+		Matrix result = matrix1;
+		result -= matrix2;
+		return result;
+	}
+	
 } // namespace PH
