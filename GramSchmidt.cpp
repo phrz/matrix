@@ -6,8 +6,9 @@
 #include <stdio.h>
 
 #include "Matrix.h"
+#include "Vector.h"
 
-using namespace std;
+using namespace PH;
 
 
 // Gram-Schmidt process for orthonormalizing a set of vectors
@@ -17,10 +18,10 @@ int GramSchmidt(Matrix& X) {
   if (X.columns() < 1)  return 0;
 
   // get entry magnitude (for linear dependence check)
-  double Xmax = InfNorm(X);
+	double Xmax = Matrix::infNorm(X);
 
   // normalize first column
-  double colnorm = Norm(X(0));
+	double colnorm = Vector::norm(Vector(X.row(0)));
   if (colnorm < 1.e-13*Xmax) {
     fprintf(stderr,"GramSchmidt error: vectors are linearly-dependent!\n");
     return 1;
@@ -32,10 +33,10 @@ int GramSchmidt(Matrix& X) {
     
     // subtract off portions in directions of existing basis vectors
     for (int j=0; j<i; j++)
-      X(j) -= Dot(X(i), X(j)) * X(j);
+		X(j) -= Matrix::dot(X(i), X(j)) * X(j);
 
     // normalize vector, checking for linear dependence
-    colnorm = Norm(X(i));
+	  colnorm = Matrix::norm(X(i));
     if (colnorm < 1.e-13*Xmax) {
       fprintf(stderr,"GramSchmidt error: vectors are linearly-dependent!\n");
       return 1;

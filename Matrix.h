@@ -33,7 +33,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "PHMath.h"
+#include "Types.h"
+#include "Serializable.h"
+#include "Vector.h"
 #include "NotImplementedException.h"
 
 namespace PH {
@@ -59,7 +61,7 @@ namespace PH {
 	 * This class wraps a Raw2DArray, alias for std::vector<MathVector>
 	 *
 	 */
-	class Matrix {
+	class Matrix: Serializable<Matrix> {
 	protected:
 		
 		/// Row count
@@ -90,10 +92,18 @@ namespace PH {
 		
 		/// Array wrap constructor using raw array
 		template<int r, int c>
-		static Matrix& fromArray(Raw1DArray source);
+		static Matrix fromArray(Raw1DArray source);
 		
 		Matrix(Raw2DArray source);
 		Matrix& operator=(const Raw2DArray& source);
+		
+		static Matrix eye(const Index size);
+		
+		// linear span
+		static Matrix linSpace(double a, double b, Index m, Index n);
+		
+		// logarithmic span
+		static Matrix logSpace(double a, double b, Index m, Index n);
 		
 		/// Copy constructor
 		Matrix(const Matrix& A);
@@ -108,6 +118,18 @@ namespace PH {
 		Matrix& operator=(Matrix&& A);
 		/// @}
 		// end of Constructors
+		
+		
+		/** @defgroup Serializable Implementation
+			@{
+		 */
+		#pragma mark Serializable
+		
+		void serialize(std::ostream& output) const;
+		Matrix& deserialize(std::istream& input);
+		/// @}
+		// end of Serializable implementation
+		
 		
 		void resize(Index r, Index c) {
 			_rowCount = r;
@@ -139,6 +161,7 @@ namespace PH {
 				}
 			});
 		}
+		
 		/// @}
 		// end of Iterators
 		
@@ -192,13 +215,9 @@ namespace PH {
 			@{
 		 */
 		#pragma mark Output routines
-		/// write to stdout
-		int Write() const;
 		
-		/// write to file
-		int Write(const char *outfile) const;
+		std::string str() const;
 		
-		/// streaming output (cout << M)
 		friend std::ostream& operator<<(std::ostream& os, const Matrix& A);
 		/// @}
 		// end of Output routines
@@ -218,33 +237,32 @@ namespace PH {
 		Matrix& operator-=(const MathNumber constant);
 		Matrix& operator-=(const Matrix& matrix);
 		
-		/// C = C.*A
-		Matrix& elementwiseMultiply(const Matrix& other);
+		Matrix& elementwiseMultiply(const Matrix& matrix);
+		Matrix operator*=(const MathNumber constant);
 		
-		/// C = a*C
-		Matrix operator*=(const MathNumber a);
+		Matrix& elementwiseDivide(const Matrix& matrix);
+		Matrix& operator/=(const MathNumber constant);
 		
-		/// C = C./A
-		Matrix& elementwiseDivide(const Matrix& A);
+		/// This(beginRow:beginColumn,endRow:endColumn) = Source
+		void insert(const Matrix& source, Index beginRow, Index beginColumn, Index endRow, Index endColumn);
 		
-		/// C(is:ie,js:je) = A
-		int Insert(const Matrix& A, long int is, long int ie,
-		 long int js, long int je);
-		
-		/// C = a
-		int Constant(double a);
+		/// Matrix fill operator
+		Matrix& operator=(const MathNumber constant);
 		
 		/// C = C.^p
-		int Power(double p);
+		Matrix& elementwisePower(const MathNumber constant);
+		Matrix& elementwisePower(const Matrix& matrix);
 		
 		/// Cij = |Cij|
-		int Abs();
+		Matrix abs();
+		Matrix& absInPlace();
 		
 		/// C = C^T
-		int Trans();
+		Matrix& transposeInPlace(); // requires square matrix
+		Matrix transpose();
 		
 		/// C = C^{-1}
-		int Inverse();
+		Matrix inverse() const;
 		/// @}
 		// end of In-place operations
 		
@@ -252,10 +270,40 @@ namespace PH {
 		Matrix T();                                              // C = A^T
 		Matrix Extract(long int is, long int ie,                 // C = A(is:ie,js:je)
 		 long int js, long int je);
-
+		
+		// backward substitution on the linear system U*X = B, returning X as a new Matrix
+		//    U and B remain unchanged in this operation
+		static Matrix backSubstitution(const Matrix& U, const Matrix& B);
+		
+		// backward substitution on U*x = b, returning x as a new Vector
+		//    U and b remain unchanged in this operation
+		static Vector backSubstitution(const Matrix& U, const Vector& b);
+		
+		// forward substitution on the linear system L*X = B, returning X as a new Matrix
+		// L and B remain unchanged in this operation
+		static Matrix forwardSubstitution(const Matrix& L, const Matrix& B);
+		
+		// forward substitution on L*x = b, returning x as a new vector<double>
+		// L and b remain unchanged in this operation
+		static Vector ForwardSubstitution(const Matrix& L, const Vector& b);
+		
+		// solves a linear system A*X = B, returning X as a new Matrix
+		// A and B are modified in this operation; X holds the result
+		static Matrix linearSolve(Matrix& A, Matrix& B);
+		
+		// solves a linear system A*x = b, filling in the input vector<double> x
+		// A and b are modified in this operation; x holds the result
+		static Vector linearSolve(Matrix& A, Vector& b);
+		
+		static MathNumber dot(const Matrix& A, const Matrix& B);
+		
 		// Scalar output operators on matrices
-		double Min() const;                             // min_ij Cij
-		double Max() const;                             // min_ij Cij
+		MathNumber min() const;
+		MathNumber max() const;
+		
+		static MathNumber norm(const Matrix& A);
+		static MathNumber infNorm(const Matrix& A);
+		static MathNumber oneNorm(const Matrix& A);
 		
 	}; // class Matrix
 	

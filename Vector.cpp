@@ -11,6 +11,10 @@
 
 namespace PH {
 	
+	Vector::Vector() {
+		_data = Raw1DArray(0);
+	}
+	
 	Vector::Vector(Index n) {
 		_data = Raw1DArray(n);
 	}
@@ -18,6 +22,45 @@ namespace PH {
 	Vector::Vector(Index n, MathNumber fill) {
 		_data = Raw1DArray(n,fill);
 	}
+	
+	Vector::Vector(Raw1DArray data) {
+		_data = data;
+	}
+	
+	Vector::Vector(std::initializer_list<double> l): _data(l) {}
+	
+	// create a new vector of linearly spaced data
+	Vector Vector::linSpace(MathNumber a, MathNumber b, Index n) {
+		if (n<2) {
+			throw new std::invalid_argument("linSpace expects a vector size argument > 1.");
+		}
+		
+		Vector v(n);
+		MathNumber h = (b-a)/(n-1);
+		
+		for (Index i=0; i<n; i++) {
+			// i * h + a
+			v[i] = std::fma(i, h, a);
+		}
+		
+		return v;
+	}
+	
+	// create a new vector of logarithmically spaced data
+	Vector Vector::logSpace(MathNumber a, MathNumber b, Index n) {
+		if (n<2) {
+			throw new std::invalid_argument("logSpace expects a vector size argument > 1.");
+		}
+		
+		Vector v(n);
+		MathNumber h = (b-a)/(n-1);
+		
+		for (Index i=0; i<n; i++)
+			v[i] = pow(10.0, a + i*h);
+		
+		return v;
+	}
+	
 	
 	// Serializable interface
 	void Vector::serialize(std::ostream& output) const {
@@ -29,7 +72,7 @@ namespace PH {
 	}
 	
 	
-	static Vector& Vector::deserialize(std::istream& input) {
+	Vector& Vector::deserialize(std::istream& input) {
 		throw new NotImplementedException();
 	}
 	
@@ -37,14 +80,10 @@ namespace PH {
 	// extract routine for portions of vectors, output = this(begin:end)
 	Vector Vector::range(Index begin, Index end) {
 		
-		// update start and end if any are negative
-		start = (start < 0) ? start+this->size() : start;
-		end = (start < 0) ? end+this->size() : end;
-		
-		if (source.size() != (end - begin + 1)) {
+		if (this->size() != (end - begin + 1)) {
 			// Checking that source vector matches provided subvector range
-			throw new std::invalid_argument("insert: size mismatch, supplied vector has " + std::to_string(source.size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
-		} else if (begin < 0 || end < 0 || end >= this.size()) {
+			throw new std::invalid_argument("insert: size mismatch, this vector has " + std::to_string(this->size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
+		} else if (end >= this->size()) {
 			// Checking that range indices are legal
 			// (counting numbers, with end in bounds)
 			throw new std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
@@ -55,11 +94,11 @@ namespace PH {
 		}
 		
 		// create new vector of desired size
-		MathVector result(end - start + 1);
+		Vector result(end - begin + 1);
 		
 		// copy requested data
-		for (Index i = start; i <= end; i++) {
-			result[i-start] = _data[i];
+		for (Index i = begin; i <= end; i++) {
+			result[i-begin] = _data[i];
 		}
 		
 		return result;
@@ -70,14 +109,10 @@ namespace PH {
 	void Vector::insert(Index begin,
 				  Index end, Vector& source) {
 		
-		// update start and end if any are negative
-		begin = (begin < 0) ? begin + this->size() : begin;
-		end = (end < 0) ? end + this->size() : end;
-		
 		if (source.size() != (end - begin + 1)) {
 			// Checking that source vector matches provided subvector range
 			throw new std::invalid_argument("insert: size mismatch, supplied vector has " + std::to_string(source.size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
-		} else if (begin < 0 || end < 0 || end >= this.size()) {
+		} else if (end >= this->size()) {
 			// Checking that range indices are legal
 			// (counting numbers, with end in bounds)
 			throw new std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
@@ -89,7 +124,7 @@ namespace PH {
 		
 		// perform operation
 		for (Index i = 0; i < source.size(); i++) {
-			_data[i + start] = source[i];
+			_data[i + begin] = source[i];
 		}
 	}
 	
@@ -100,7 +135,7 @@ namespace PH {
 	/// ADDITION
 	
 	/// In-place, constant (vector-by-number) addition.
-	MathVector& Vector::operator+=(const MathNumber addend) {
+	Vector& Vector::operator+=(const MathNumber addend) {
 		this->mapElements([addend](MathNumber& element, Index i) {
 			element += addend;
 		});
@@ -217,6 +252,51 @@ namespace PH {
 		return *this;
 	}
 	
+	// Vector Dot Product
+	// inner product between two vectors
+	static MathNumber Vector::dot(const Vector& v1, const Vector& v2) {
+		if (v1.size() != v2.size()) {
+			throw new std::invalid_argument("dot product: incompatible vector sizes (must be same)");
+		}
+		
+		MathNumber result = 0.0;
+		for(Index i=0; i<v2.size(); i++) {
+			result += v1[i] * v2[i];
+		}
+		
+		return result;
+	}
+	
+	// vector 2-norm
+	MathNumber Vector::norm(const Vector& v) {
+		MathNumber sum = 0.0;
+		for(Index i = 0; i < v.size(); i++) {
+			// sum = (v[i]*v[i]) + sum
+			sum = std::fma(v[i], v[i], sum);
+		}
+		return sqrt(sum);
+	}
+	
+	
+	// vector infinity norm
+	MathNumber Vector::infNorm(const Vector& v) {
+		MathNumber mx = 0.0;
+		for (Index i = 0; i < v.size(); i++) {
+			mx = std::max(mx,std::abs(v[i]));
+		}
+		return mx;
+	}
+	
+	
+	// vector one-norm
+	MathNumber Vector::oneNorm(const Vector& v) {
+		MathNumber sum = 0.0;
+		for (Index i = 0; i < v.size(); i++) {
+			sum += std::abs(v[i]);
+		}
+		return sum;
+	}
+	
 	#pragma mark Functional Operators
 	
 	// Result = Vector + Constant
@@ -298,7 +378,7 @@ namespace PH {
 	
 	// Result = Vector / Vector
 	Vector operator/(const Vector& vector1, const Vector& vector2) {
-		MathVector result = vector1;
+		Vector result = vector1;
 		result /= vector2;
 		return result;
 	}

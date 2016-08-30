@@ -11,7 +11,7 @@
 
 #include "Matrix.h"
 
-using namespace std;
+using namespace PH;
 
 // prototypes of other functions
 int GramSchmidt(Matrix& X);
@@ -25,29 +25,29 @@ int main(int argc, char* argv[]) {
 
 	// create a row vec with an existing data array
 	double dat1[5] = {0.1, 0.2, 0.3, 0.4, 0.5};
-	Matrix b(1, 5, dat1);
+	Matrix b(1, 5);
+	b = {{0.1, 0.2, 0.3, 0.4, 0.5}};
 
 	// create a column vec with an existing vector
-	vector<double> dat2 = {0.1, 0.2, 0.3, 0.4, 0.5};
-	Matrix b2(5, 1, dat2);
+	Vector b2 = {{0.1, 0.2, 0.3, 0.4, 0.5}};
 
 	// create a row vector using linspace
-	Matrix c = Linspace(1.0, 5.0, 1, 5);
+	Matrix c = Matrix::linSpace(1.0, 5.0, 1, 5);
 
-	// create a column vector using the single integer constructor
-	Matrix h(7);
+	// create a column vector using the double integer constructor
+	Matrix h(7, 1);
 
 	// output vectors above to screen
 	printf("writing array of zeros:\n");
-	a.Write();
+	std::cout << a << std::endl;
 	printf("writing array of 0.1,0.2,0.3,0.4,0.5:\n");
-	b.Write();
+	std::cout << b << std::endl;
 	printf("writing (column) array of 0.1,0.2,0.3,0.4,0.5:\n");
-	b2.Write();
+	std::cout << b2 << std::endl;
 	printf("writing array of 1,2,3,4,5:\n");
-	c.Write();
+	std::cout << c << std::endl;
 	printf("writing a column vector of 7 zeros:\n");
-	h.Write();
+	std::cout << h << std::endl;
 
 	// verify that b has size 5
 	if (b.rows()*b.columns() != 5) {
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
 	if (b.size() != 5) {
 		printf("error: incorrect matrix size\n");
 	}
-
+	/*
 	// edit entries of a in both matrix forms, and write each entry of a to screen
 	a(0,0) = 10.0;
 	a(0,1) = 15.0;
@@ -419,7 +419,7 @@ int main(int argc, char* argv[]) {
   cout << "  ||I - D*Dinv|| = " << InfNorm(Eye(8) - DDinv_) << endl;
   DDinv_ = Dinv_*D_;
   cout << "  ||I - Dinv*D|| = " << InfNorm(Eye(8) - DDinv_) << endl;
-
+*/
   return 0;
 } // end main
 

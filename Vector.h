@@ -9,8 +9,10 @@
 #ifndef Vector_h
 #define Vector_h
 
-#include "PHMath.h"
+#include "Types.h"
 #include "Serializable.h"
+
+#include <sstream>
 
 namespace PH {
 	
@@ -19,11 +21,24 @@ namespace PH {
 		Raw1DArray _data;
 	public:
 		
+		// empty constructor
+		Vector();
+		
 		// size constructor, zero-fill
 		Vector(Index n);
 		
 		// size and custom fill constructor
 		Vector(Index n, MathNumber fill);
+		
+		Vector(Raw1DArray data);
+		
+		Vector(std::initializer_list<double> l);
+		
+		// creates a vector of n linearly spaced values from a through b
+		static Vector linSpace(double a, double b, Index n);
+		
+		// creates a vector of n logarithmically spaced values from 10^a through 10^b
+		static Vector logSpace(double a, double b, Index n);
 		
 		// Serializable implementation
 		void serialize(std::ostream& output) const;
@@ -70,6 +85,12 @@ namespace PH {
 		
 		Vector& operator^=(const MathNumber exponent);
 		Vector& operator^=(const Vector& exponents);
+		
+		MathNumber static dot(const Vector& v1, const Vector& v2);
+		
+		static MathNumber norm(const Vector& v);
+		static MathNumber infNorm(const Vector& v);
+		static MathNumber oneNorm(const Vector& v);
 		
 	}; // class Vector
 	
