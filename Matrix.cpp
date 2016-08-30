@@ -89,6 +89,30 @@ namespace PH {
 	}
 	
 	
+	// create a matrix with uniformly-distributed random numbers in [0,1]
+	Matrix Matrix::random(Index rows, Index columns) {
+		if (rows == 0 || columns == 0) {
+			throw new std::invalid_argument("randomMatrixOfSize expects a vector size argument > 0.");
+		}
+		
+		// Create random device for a uniform integer
+		// distribution.
+		
+		// This is much like MATLAB's rand().
+		std::random_device randomDevice;
+		std::mt19937 generator(randomDevice());
+		std::uniform_real_distribution<> dist(0, 1);
+		
+		Matrix result(rows, columns);
+		result.mapElements([&dist, &generator](MathNumber& element, Index r, Index c){
+			element = dist(generator);
+		});
+		
+		return result;
+	}
+
+	
+	
 	// create a new matrix of linearly spaced data
 	Matrix Matrix::linSpace(MathNumber a, MathNumber b, Index m, Index n) {
 		Matrix C(m,n);

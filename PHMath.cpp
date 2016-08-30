@@ -6,19 +6,10 @@
 //  Copyright © 2016 Paul Herz. All rights reserved.
 //
 
-//#include <random>
 //
 //namespace PH {
 //
-//	// create a matrix with uniformly-distributed random numbers in [0,1]
-//	Matrix randomMatrixOfSize(Index m, Index n) {
-//		Matrix C(m,n);
-//		for (Index j=0; j<n; j++)
-//			for (Index i=0; i<m; i++)
-//				C._data[j][i] = random() / (pow(2.0,31.0) - 1.0);
-//		return C;
-//	}	
-//	
+
 //	// create a new vector with uniformly-distributed random numbers in [0,1]
 //	Vector randomVectorOfSize(Index n) {
 //		if (n<1) {
@@ -35,13 +26,12 @@
 //		
 //		Vector result(n);
 //		result.mapElements([&dist, &generator](MathNumber& element, Index i){
-////			element = dist(generator);
-//			element = std::rand();
+//			element = dist(generator);
 //		});
 //		
 //		return result;
 //	}
-//	
+//
 //	
 //	// standard matrix-vector product
 //	Vector matrixVectorProduct(const Matrix& A, const Vector& v) {

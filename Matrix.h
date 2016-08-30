@@ -32,6 +32,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <random>
 
 #include "Types.h"
 #include "Serializable.h"
@@ -61,7 +62,7 @@ namespace PH {
 	 * This class wraps a Raw2DArray, alias for std::vector<MathVector>
 	 *
 	 */
-	class Matrix: Serializable<Matrix> {
+	class Matrix: public Serializable<Matrix> {
 	protected:
 		
 		/// Row count
@@ -101,6 +102,7 @@ namespace PH {
 		Matrix& operator=(const Raw2DArray& source);
 		
 		static Matrix eye(const Index size);
+		static Matrix random(const Index rows, Index columns);
 		
 		// linear span
 		static Matrix linSpace(double a, double b, Index m, Index n);

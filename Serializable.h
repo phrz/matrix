@@ -33,10 +33,10 @@ namespace PH {
 			}
 			
 			serialize(file);
-			file.close();
+			// ofstream self-closes, guaranteed.
 		}
 		
-		virtual void loadFrom(const std::string& path) {
+		virtual SerialType loadFrom(const std::string& path) {
 			std::ifstream file;
 			file.open(path);
 			
@@ -44,8 +44,8 @@ namespace PH {
 				throw new std::runtime_error("Could not open file (" + path + ") to load from.");
 			}
 			
-			this->deserialize(file);
-			file.close();
+			return this->deserialize(file);
+			// ifstream self-closes, guaranteed.
 		}
 	};
 }

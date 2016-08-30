@@ -39,12 +39,16 @@ int main(int argc, char* argv[]) {
 	// output vectors above to screen
 	printf("writing array of zeros (a):\n");
 	std::cout << a << std::endl;
+	
 	printf("writing array of 0.1,0.2,0.3,0.4,0.5 (b):\n");
 	std::cout << b << std::endl;
+	
 	printf("writing (column) array of 0.1,0.2,0.3,0.4,0.5 (b2):\n");
 	std::cout << b2 << std::endl;
+	
 	printf("writing array of 1,2,3,4,5 (c):\n");
 	std::cout << c << std::endl;
+	
 	printf("writing a column vector of 7 zeros (h):\n");
 	std::cout << h << std::endl;
 
@@ -55,36 +59,41 @@ int main(int argc, char* argv[]) {
 	if (b.size() != 5) {
 		printf("error: incorrect matrix size\n");
 	}
-	/*
+	
 	// edit entries of a in both matrix forms, and write each entry of a to screen
+	// (a is a row vector)
 	a(0,0) = 10.0;
-	a(0,1) = 15.0;
-	a(2,0) = 20.0;
-	a(3,0) = 25.0;
-	a(4,0) = 30.0;
+	a(1) = 15.0;
+	a(0,2) = 20.0;
+	a(3) = 25.0;
+	a(0,4) = 30.0;
 	printf("entries of a, one at a time: should give 10, 15, 20, 25, 30\n");
 	for (size_t i=0; i<a.columns(); i++) {
 		printf("  %g\n",a(i));
 	}
 	
-  // write the values to file
-  printf("writing this same vector to the file 'a_data':\n");
-  a.Write("a_data");
+	// write the values to file
+	printf("writing this same vector to the file 'a_data.txt':\n");
+	a.saveTo("a_data.txt");
+	
 
-  // Testing MatrixRead() constructor
-  double tol = 1.0e-15;
-  Matrix read_test1a = Random(3,4);
-  read_test1a.Write("tmp.txt");
-  Matrix read_test1b = MatrixRead("tmp.txt");
-  Matrix read_test1_error = read_test1a-read_test1b;
-  if (InfNorm(read_test1_error) < tol)
-    cout << "MatrixRead() test 1 passed\n";
-  else {
-    cout << "MatrixRead() test 1 failed, ||error|| = " << InfNorm(read_test1_error) << endl;
-    cout << "  read_test1a = \n" << read_test1a;
-    cout << "  read_test1b = \n" << read_test1b;
-  }
-
+	// testing Matrix deserialize
+	double tol = 1.0e-15;
+	
+	Matrix read_test1a = Matrix::random(3,4);
+	read_test1a.saveTo("tmp.txt");
+	
+	Matrix read_test1b = Matrix().loadFrom("tmp.txt");
+	
+	Matrix read_test1_error = read_test1a-read_test1b;
+	if (Matrix::infNorm(read_test1_error) < tol) {
+		std::cout << "deserialize test 1 passed\n";
+	} else {
+		std::cout << "deserialize test 1 failed, ||error|| = " << InfNorm(read_test1_error) << endl;
+		std::cout << "  read_test1a = \n" << read_test1a;
+		std::cout << "  read_test1b = \n" << read_test1b;
+	}
+/*
   Matrix read_test2a = Random(12,1);
   read_test2a.Write("tmp.txt");
   Matrix read_test2b = MatrixRead("tmp.txt");
