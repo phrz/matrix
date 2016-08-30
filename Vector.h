@@ -42,7 +42,7 @@ namespace PH {
 		
 		// Serializable implementation
 		void serialize(std::ostream& output) const;
-		Vector& deserialize(std::istream& input);
+		Vector deserialize(std::istream& input);
 		
 		void mapElements(std::function<void(MathNumber&,Index)> callback) {
 			for(auto it = _data.begin(); it != _data.end(); ++it) {

@@ -33,10 +33,10 @@ int GramSchmidt(Matrix& X) {
     
     // subtract off portions in directions of existing basis vectors
     for (int j=0; j<i; j++)
-		X(j) -= Matrix::dot(X(i), X(j)) * X(j);
+		X(j) -= Vector::dot(Vector(X(i)), Vector(X(j))) * X(j);
 
     // normalize vector, checking for linear dependence
-	  colnorm = Matrix::norm(X(i));
+	  colnorm = Vector::norm(Vector(X(i)));
     if (colnorm < 1.e-13*Xmax) {
       fprintf(stderr,"GramSchmidt error: vectors are linearly-dependent!\n");
       return 1;

@@ -34,7 +34,7 @@
 //		std::uniform_real_distribution<> dist(0, 1);
 //		
 //		Vector result(n);
-//		result.mapElements([dist, generator](MathNumber& element, Index i){
+//		result.mapElements([&dist, &generator](MathNumber& element, Index i){
 ////			element = dist(generator);
 //			element = std::rand();
 //		});

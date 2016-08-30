@@ -24,12 +24,11 @@ int main(int argc, char* argv[]) {
 	Matrix a(1,5);
 
 	// create a row vec with an existing data array
-	double dat1[5] = {0.1, 0.2, 0.3, 0.4, 0.5};
 	Matrix b(1, 5);
 	b = {{0.1, 0.2, 0.3, 0.4, 0.5}};
 
 	// create a column vec with an existing vector
-	Vector b2 = {{0.1, 0.2, 0.3, 0.4, 0.5}};
+	Vector b2 = {0.1, 0.2, 0.3, 0.4, 0.5};
 
 	// create a row vector using linspace
 	Matrix c = Matrix::linSpace(1.0, 5.0, 1, 5);
@@ -38,15 +37,15 @@ int main(int argc, char* argv[]) {
 	Matrix h(7, 1);
 
 	// output vectors above to screen
-	printf("writing array of zeros:\n");
+	printf("writing array of zeros (a):\n");
 	std::cout << a << std::endl;
-	printf("writing array of 0.1,0.2,0.3,0.4,0.5:\n");
+	printf("writing array of 0.1,0.2,0.3,0.4,0.5 (b):\n");
 	std::cout << b << std::endl;
-	printf("writing (column) array of 0.1,0.2,0.3,0.4,0.5:\n");
+	printf("writing (column) array of 0.1,0.2,0.3,0.4,0.5 (b2):\n");
 	std::cout << b2 << std::endl;
-	printf("writing array of 1,2,3,4,5:\n");
+	printf("writing array of 1,2,3,4,5 (c):\n");
 	std::cout << c << std::endl;
-	printf("writing a column vector of 7 zeros:\n");
+	printf("writing a column vector of 7 zeros (h):\n");
 	std::cout << h << std::endl;
 
 	// verify that b has size 5

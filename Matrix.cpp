@@ -22,7 +22,7 @@ namespace PH {
 		
 		Matrix result = Matrix(r,c);
 		
-		result.mapElements([source](MathNumber& element, Index row, Index column) {
+		result.mapElements([&source](MathNumber& element, Index row, Index column) {
 			element = source[row * column + column];
 		});
 		
@@ -81,7 +81,17 @@ namespace PH {
 	
 	// Raw2DArray -> conversion by assignment constructor
 	Matrix& Matrix::operator=(const Raw2DArray& source) {
-		
+		// provided array is row-major
+		_rowCount = source.size();
+		_columnCount = source[0].size();
+		for(auto row: source) {
+			// confirm column size consistency
+			if(row.size() != _columnCount) {
+				throw new std::invalid_argument("Matrix Raw2DArray assignment constructor: each row must have the same number of columns.");
+			}
+		}
+		this->_data = source;
+		return *this;
 	}
 
 	// copy constructor
@@ -131,7 +141,7 @@ namespace PH {
 		output << str();
 	}
 	
-	Matrix& Matrix::deserialize(std::istream& input) {
+	Matrix Matrix::deserialize(std::istream& input) {
 		// determine matrix size
 		Index newRowCount = 0, newColumnCount = 0;
 		std::string line;
@@ -164,7 +174,7 @@ namespace PH {
 		Matrix result = Matrix(newRowCount, newColumnCount);
 		
 		// load matrix based on data from file
-		for (Index i = 0; i < _rows; i++) {
+		for (Index row = 0; row < _rowCount; ++row) {
 			
 			getline(input, line);
 			std::istringstream iss(line);
@@ -175,49 +185,48 @@ namespace PH {
 		}
 		
 		return result;
-
 	}
 
 
 	// column accessor routines
-	MathVector& Matrix::column(Index i) {
+	Raw1DArray Matrix::column(Index i) {
 	  return _data[i];
 	}
 	
 	// row accessor (copy) routine
-	MathVector Matrix::row(Index row) {
-		MathVector rowVector = MathVector(_columnCount);
+	Raw1DArray Matrix::row(Index row) {
+		Raw1DArray rowArray = Raw1DArray(_columnCount);
 		
 		for (Index column = 0; column < _columnCount; column++) {
-			rowVector[column] = _data[column][row];
+			rowArray[column] = _data[column][row];
 		}
 		
-		return rowVector;
+		return rowArray;
 	}
 
 	// Matlab/Fortran Matrix accessors (row, column)
 	MathNumber& Matrix::operator()(Index row, Index column) {
 		return _data[column][row];
 	}
-	MathNumber Matrix::operator()(Index row, Index column) const {
+	const MathNumber& Matrix::operator()(Index row, Index column) const {
 		return _data[column][row];
 	}
 	MathNumber& Matrix::operator()(Index linearIndex) {
-		return _data[linearIndex / _rows][linearIndex % _rows];
+		return _data[linearIndex / _rowCount][linearIndex % _rowCount];
 	}
-	MathNumber Matrix::operator()(Index linearIndex) const {
-		return _data[linearIndex / _rows][linearIndex % _rows];
+	const MathNumber& Matrix::operator()(Index linearIndex) const {
+		return _data[linearIndex / _rowCount][linearIndex % _rowCount];
 	}
 	
 	// build a string representation and return it
 	std::string Matrix::str() const {
-		std::stringstream ss();
+		auto ss = std::stringstream();
 		
-		for (Index row = 0; row < _rows; row++) {
+		for (Index row = 0; row < _rowCount; row++) {
 			for (Index column = 0; column < _columnCount; column++) {
-				ss << _data[column][row];
+				ss << "    " << (*this)(row, column);
 			}
-			ss << "\n";
+			ss << std::endl;
 		}
 		
 		return ss.str();
@@ -225,7 +234,8 @@ namespace PH {
 
 	// streaming output routine
 	ostream& operator<<(ostream& os, const Matrix& A) {
-		os << this->str();
+		os << A.str();
+		return os;
 	}
 	
 	# pragma mark In-Place Member Operations
@@ -233,11 +243,13 @@ namespace PH {
 	// A = (a*A) + (b*B)
 	Matrix& Matrix::linearSumInPlace(MathNumber matrix1Constant, MathNumber matrix2Constant, const Matrix& matrix2) {
 		// check that array sizes match
-		if (this.dimensions() == matrix2.dimensions()) {
+		if (this->dimensions() == matrix2.dimensions()) {
 			throw new std::invalid_argument("matrix-by-matrix linear sum (a*A+b*B): incompatible matrix dimensions (must be same)");
 		}
 		
-		mapElements([](MathNumber& matrix1Element, Index row, Index column) {
+		mapElements([&matrix1Constant, &matrix2Constant, &matrix2]
+					(MathNumber& matrix1Element, Index row, Index column)
+		{
 			matrix1Element *= matrix1Constant;
 			// fused multiply-add operation ($0 * $1) + $2
 			// usually handled in one operation on a modern processor.
@@ -251,7 +263,7 @@ namespace PH {
 	// ADDITION
 	
 	Matrix& Matrix::operator+=(const MathNumber constant) {
-		mapElements([constant](MathNumber& element, Index row, Index column) {
+		mapElements([&constant](MathNumber& element, Index row, Index column) {
 			element += constant;
 		});
 		
@@ -268,13 +280,12 @@ namespace PH {
 	// SUBTRACTION
 	
 	Matrix& Matrix::operator-=(const MathNumber constant) {
-		this += -constant;
+		(*this) += -constant;
 		return *this;
 	}
 	
 	Matrix& Matrix::operator-=(const Matrix& matrix) {
 		linearSumInPlace(1.0, -1.0, matrix);
-		
 		return *this;
 	}
 	
@@ -283,12 +294,12 @@ namespace PH {
 	
 	Matrix& Matrix::elementwiseMultiply(const Matrix& other) {
 		// check that array sizes match
-		if (this.dimensions() != other.dimensions()) {
+		if (this->dimensions() != other.dimensions()) {
 			throw new std::invalid_argument("elementwise matrix multiplication (A.*B): incompatible matrix dimensions (must be same)");
 		}
 
 		// perform operation
-		mapElements([other](MathNumber& element, Index row, Index column) {
+		mapElements([&other](MathNumber& element, Index row, Index column) {
 			element *= other(row, column);
 		});
 
@@ -297,7 +308,7 @@ namespace PH {
 	
 	Matrix& Matrix::operator*=(const MathNumber constant) {
 		// perform operation
-		mapElements([constant](MathNumber& element, Index row, Index column) {
+		mapElements([&constant](MathNumber& element, Index row, Index column) {
 			element *= constant;
 		});
 
@@ -309,11 +320,11 @@ namespace PH {
 	
 	Matrix& Matrix::elementwiseDivide(const Matrix& matrix) {
 		// check that array sizes match
-		if (this.dimensions() != matrix.dimensions()) {
+		if (this->dimensions() != matrix.dimensions()) {
 			throw new std::invalid_argument("elementwise matrix division (A./B): incompatible matrix dimensions (must be same)");
 		}
 		
-		mapElements([matrix](MathNumber& element, Index row, Index column) {
+		mapElements([&matrix](MathNumber& element, Index row, Index column) {
 			MathNumber otherElement = matrix(row,column);
 			if (otherElement == 0.0) {
 				throw new std::runtime_error("elementwise matrix division (A./B): division by zero");
@@ -326,7 +337,7 @@ namespace PH {
 	
 	Matrix& Matrix::operator/=(const MathNumber constant) {
 		// perform operation
-		mapElements([constant](MathNumber& element, Index row, Index column) {
+		mapElements([&constant](MathNumber& element, Index row, Index column) {
 			element /= constant;
 		});
 		
@@ -335,23 +346,15 @@ namespace PH {
 	
 	
 	
-	//     is,ie,js,je negative  =>  offset from end of dimension (-1 == end)
-	int Matrix::insert(const Matrix& source, Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
+	void Matrix::insert(const Matrix& source, Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
 		
-		// update indices if negative
-		
-		beginRow = (beginRow < 0) ? beginRow + _rows : beginRow;
-		endRow = (endRow < 0) ? endRow + _rows : endRow;
-		beginColumn = (beginColumn < 0) ? beginColumn + _columnCount : beginColumn;
-		endColumn = (endColumn < 0) ? endColumn + _columnCount : endColumn;
-
 		// VALIDATION
 		
 		if (source.rows() != (endRow-beginRow+1) || source.columns() != (endColumn-beginColumn+1)) {
 			// the source matrix is not the same size as the submatrix that it is to replace
 			throw new std::invalid_argument("insert: size mismatch, supplied matrix is ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+"), but requested submatrix is ("+std::to_string(endRow-beginRow+1)+", "+std::to_string(endColumn-beginColumn+1)+").");
 			
-		} else if (beginRow < 0 || beginRow >= rows() || endRow < 0 || endRow >= rows() || beginColumn < 0 || beginColumn >= columns() || endColumn < 0 || endColumn >= columns()) {
+		} else if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
 			
 			throw new std::invalid_argument("insert: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+")");
 			
@@ -361,8 +364,8 @@ namespace PH {
 		}
 
 		// perform operation
-		for (Index column = 0; j < A.columns(); ++column) {
-			for (Index row = 0; row < A.rows(); ++row) {
+		for (Index column = 0; column < source.columns(); ++column) {
+			for (Index row = 0; row < source.rows(); ++row) {
 				(*this)(row+beginRow, column+beginColumn) = source(row, column);
 			}
 		}
@@ -371,15 +374,16 @@ namespace PH {
 	
 	// constant fill operator
 	Matrix& Matrix::operator=(const MathNumber constant) {
-		mapElements([constant](MathNumber& element, Index r, Index c) {
+		mapElements([&constant](MathNumber& element, Index r, Index c) {
 			element = constant;
 		});
+		return *this;
 	}
 
 	
 	// C = C.^p
 	Matrix& Matrix::elementwisePower(const MathNumber constant) {
-		mapElements([constant](MathNumber& element, Index r, Index c) {
+		mapElements([&constant](MathNumber& element, Index r, Index c) {
 			element = std::pow(element, constant);
 		});
 		
@@ -388,8 +392,8 @@ namespace PH {
 	
 	
 	Matrix& Matrix::elementwisePower(const Matrix& matrix) {
-		mapElements([other](MathNumber& element, Index r, Index c) {
-			element = std::pow(element, other(r,c));
+		mapElements([&matrix](MathNumber& element, Index r, Index c) {
+			element = std::pow(element, matrix(r,c));
 		});
 		
 		return *this;
@@ -397,7 +401,7 @@ namespace PH {
 	
 	
 	Matrix Matrix::abs() {
-		Matrix result = this;
+		Matrix result = *this;
 		result.absInPlace();
 		return result;
 	}
@@ -434,7 +438,7 @@ namespace PH {
 		Matrix result(columns(), rows());
 		
 		// copy transposed data over
-		mapElements([result](MathNumber& oldElement, Index r, Index c){
+		mapElements([&result](MathNumber& oldElement, Index r, Index c){
 			result(c, r) = oldElement;
 		});
 		
@@ -444,75 +448,50 @@ namespace PH {
 	// computes the inverse of a nonsingular matrix 
 	Matrix Matrix::inverse() const {
 		// check that matrix sizes match
-		if (this.isSquare()) {
+		if (not this->isSquare()) {
 			throw new std::logic_error("Cannot invert a non-square matrix.");
 		}
 
 		// create two temporary matrices for operation
 		Matrix A = *this;
-		Matrix X = Matrix(rows(), columns());
 		Matrix B = Matrix::eye(rows());
 		
 		// solve the linear system A*X=B, filling in X, the inverse
-		Matrix::linearSolve(A, X, B);
+		auto X = Matrix::linearSolve(A, B);
 		
-		// return success
-		return 0;
-	}
-
-
-	///// Derived matrix creation operations /////
-
-	// C = A^T
-	Matrix Matrix::T() {
-	  Matrix C(*this);
-	  C.Trans();
-	  return C;
+		return X;
 	}
 
 	// submatrix extraction routine (creates a matrix from a portion of an existing Mat)
 	//     is,ie,js,je negative  =>  offset from end of dimension (-1 == end)
-	Matrix Matrix::Extract(long int is, long int ie, long int js, long int je) {
+	Matrix Matrix::submatrix(Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
+		
+		// check that requested submatrix exists
+		if (rows() != (endRow-beginRow+1) || columns() != (endColumn-beginColumn+1)) {
+			// the source matrix is not the same size as the submatrix that it is to replace
+			throw new std::invalid_argument("submatrix: size mismatch, source matrix is ("+std::to_string(rows())+", "+std::to_string(columns())+"), but requested submatrix is ("+std::to_string(endRow-beginRow+1)+", "+std::to_string(endColumn-beginColumn+1)+").");
+			
+		} else if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
+			
+			throw new std::invalid_argument("submatrix: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(rows())+", "+std::to_string(columns())+")");
+			
+		} else if (endRow < beginRow || endColumn < beginColumn) {
+			
+			throw new std::invalid_argument("submatrix: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ")");
+		}
 
-	  // update is,ie,js,je if any are negative
-	  is = (is < 0) ? is+_rows : is;
-	  ie = (ie < 0) ? ie+_rows : ie;
-	  js = (js < 0) ? js+_columnCount : js;
-	  je = (je < 0) ? je+_columnCount : je;
+		// create new matrix of desired size
+		Matrix C(endRow-beginRow+1, endColumn-beginColumn+1);
+		
+		// copy requested data
+		for (Index column = beginColumn; column <= endColumn; ++column) {
+			for (Index row = beginRow; row <= endRow; row++) {
+				C(row-beginRow,column-beginColumn) = (*this)(row, column);
+			}
+		}
 
-	  // check that requested submatrix exists
-	  if (is < 0 || is >= _rows) {
-		cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-		cerr << "  illegal is = " << is << " (matrix has " << _rows << " rows)\n";
-	  }
-	  if (ie < 0 || ie >= _rows) {
-		cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-		cerr << "  illegal ie = " << ie << " (matrix has " << _rows << " rows)\n";
-	  }
-	  if (js < 0 || js >= _columnCount) {
-		cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-		cerr << "  illegal js = " << js << " (matrix has " << _columnCount << " columns)\n";
-	  }
-	  if (je < 0 || je >= _columnCount) {
-		cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-		cerr << "  illegal je = " << je << " (matrix has " << _columnCount << " columns)\n";
-	  }
-	  if (ie < is || je < js) {
-		cerr << "Matrix::Extract error, requested submatrix does not exist\n";
-		cerr << "  upper index is below lower index: is = " << is << ", ie = " 
-		 << ie << ", js = " << js << ", je = " << je << endl;
-	  }
-
-	  // create new matrix of desired size
-	  Matrix C(ie-is+1, je-js+1);
-
-	  // copy requested data
-	  for (Index j=js; j<=je; j++) 
-		for (Index i=is; i<=ie; i++) 
-		  C._data[j-js][i-is] = _data[j][i];
-
-	  // return object
-	  return C;
+		// return object
+		return C;
 	}
 	
 # pragma mark linear algebra routines
@@ -530,7 +509,7 @@ namespace PH {
 		MathNumber Amax;
 		
 		// determine magnitude of entries in A (for singularity check later)
-		Amax = InfNorm(A);
+		Amax = Matrix::infNorm(A);
 		
 		// perform Gaussian elimination to convert A,B to an upper-triangular system
 		for (k=0; k<A.rows()-1; k++) {   // loop over diagonals
@@ -665,7 +644,7 @@ namespace PH {
 	
 	
 	// backward substitution on the linear system U*X = B, filling in a Matrix X
-	static Matrix Matrix::backSubstitution(const Matrix& U, const Matrix& B) {
+	Matrix Matrix::backSubstitution(const Matrix& U, const Matrix& B) {
 		
 		auto X = Matrix(U.rows(), B.columns());
 		
@@ -678,19 +657,18 @@ namespace PH {
 		X = B;
 		
 		// analyze matrix for magnitude
-		MathNumber Umax = InfNorm(U);
+		MathNumber Umax = Matrix::infNorm(U);
 		
 		// perform column-oriented Backward Substitution algorithm
-		for (Index j=U.rows()-1; j>=0; j--) {
+		for (Index j = U.rows() - 1; j-- > 0;) {
 			// check for nonzero matrix diagonal
 			if (std::abs(U._data[j][j]) < STOL*Umax) {
-				cerr << "BackSubstitution error: numerically singular matrix!\n";
-				return emptyResult;
+				throw new std::runtime_error("backSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
-			for (Index k=0; k<X.columns(); k++) {
-				X._data[k][j] /= U._data[j][j];
+			for (Index k=0; k < X.columns(); k++) {
+				X(j,k) /= U(j,j);
 			}
 			
 			// update all remaining rhs
@@ -702,11 +680,11 @@ namespace PH {
 		} // end Back sub.
 		
 		// return success
-		return std::optional<Matrix>(X);
+		return X;
 	}
 	
 	// backward substitution on U*x = b, returning Vector x
-	Vector backSubstitution(const Matrix& U, const Vector& b) {
+	Vector Matrix::backSubstitution(const Matrix& U, const Vector& b) {
 		
 		auto x = Vector(U.rows());
 		
@@ -719,14 +697,13 @@ namespace PH {
 		x = b;
 		
 		// analyze matrix for magnitude
-		MathNumber Umax = InfNorm(U);
+		MathNumber Umax = Matrix::infNorm(U);
 		
 		// perform column-oriented Backward Substitution algorithm
 		for (long int j=U.rows()-1; j>=0; j--) {
 			// check for nonzero matrix diagonal
 			if (std::abs(U._data[j][j]) < STOL * Umax) {
-				cerr << "BackSubstitution error: numerically singular matrix!\n";
-				return emptyResult;
+				throw new std::runtime_error("backSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -739,14 +716,14 @@ namespace PH {
 		}
 		
 		// return success
-		return std::optional<Vector>(x);
+		return x;
 	}
 	
 	
 	// forward substitution on the linear system L*X = B, filling in Matrix X
 	//    L and B remain unchanged in this operation; X holds the result
 	//    B and X may have multiple columns
-	Matrix forwardSubstitution(const Matrix& L, const Matrix& B) const {
+	Matrix Matrix::forwardSubstitution(const Matrix& L, const Matrix& B) {
 		
 		auto X = Matrix(L.rows(), B.columns());
 		
@@ -759,14 +736,13 @@ namespace PH {
 		X = B;
 		
 		// analyze matrix magnitude
-		MathNumber Lmax = InfNorm(L);
+		MathNumber Lmax = Matrix::infNorm(L);
 		
 		// perform column-oriented Forwards Substitution algorithm
 		for (long int j=0; j<L.rows(); j++) {
 			// check for nonzero matrix diagonal
 			if (std::abs(L._data[j][j]) < STOL*Lmax) {
-				cerr << "ForwardSubstitution error: singular matrix!\n";
-				return emptyResult;
+				throw new std::runtime_error("backSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -783,13 +759,13 @@ namespace PH {
 		} // end Column-oriented forward sub.
 		
 		// return success
-		return std::optional<Matrix>(X);
+		return X;
 	}
 	
 	
 	// forward substitution on L*x = b, filling in a resulting Vector x
 	//    L and b remain unchanged in this operation; x holds the result
-	Vector forwardSubstitution(const Matrix& L, const Vector& b) const {
+	Vector Matrix::forwardSubstitution(const Matrix& L, const Vector& b) {
 		
 		auto x = Vector(L.rows());
 		
@@ -801,15 +777,14 @@ namespace PH {
 		x = b;
 		
 		// analyze matrix for magnitude
-		MathNumber Lmax = infNorm(L);
+		MathNumber Lmax = Matrix::infNorm(L);
 		
 		// perform column-oriented Forwards Substitution algorithm
-		for (long int j=0; j<L.rows(); j++) {
+		for (Index j=0; j<L.rows(); j++) {
 			
 			// check for nonzero matrix diagonal
 			if (std::abs(L._data[j][j]) < STOL*Lmax) {
-				cerr << "ForwardSubstitution error: singular matrix!\n";
-				return emptyResult;
+				throw new std::runtime_error("forwardSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -851,7 +826,7 @@ namespace PH {
 	MathNumber Matrix::min() const {
 		MathNumber mn = _data[0][0];
 		for (Index column = 0; column < columns(); ++column) {
-			for (Index row = 0; i < rows(); i++) {
+			for (Index row = 0; row < rows(); ++row) {
 				mn = std::min(mn, (*this)(row,column));
 			}
 		}
@@ -862,7 +837,7 @@ namespace PH {
 	MathNumber Matrix::max() const {
 		MathNumber mx = _data[0][0];
 		for (Index column = 0; column < columns(); ++column) {
-			for (Index row = 0; i < rows(); i++) {
+			for (Index row = 0; row < rows(); ++row) {
 				mx = std::max(mx, (*this)(row,column));
 			}
 		}
@@ -870,7 +845,7 @@ namespace PH {
 	}
 	
 	// matrix Frobenius norm (column/row vector 2-norm)
-	static MathNumber Matrix::norm(const Matrix& A) {
+	MathNumber Matrix::norm(const Matrix& A) {
 		MathNumber sum=0.0;
 		for (Index j=0; j<A.columns(); j++)
 			for (Index i=0; i<A.rows(); i++)
@@ -879,7 +854,7 @@ namespace PH {
 	}
 	
 	// matrix infinity norm (column vector infinity norm, row vector one norm)
-	static MathNumber Matrix::infNorm(const Matrix& A) {
+	MathNumber Matrix::infNorm(const Matrix& A) {
 		MathNumber mx=0.0;
 		for (Index i=0; i<A.rows(); i++) {
 			MathNumber sum=0.0;
@@ -891,7 +866,7 @@ namespace PH {
 	}
 	
 	// matrix one norm (column vector one norm, row vector infinity norm)
-	static MathNumber Matrix::oneNorm(const Matrix& A) {
+	MathNumber Matrix::oneNorm(const Matrix& A) {
 		MathNumber mx=0.0;
 		for (Index j=0; j<A.columns(); j++) {
 			MathNumber sum=0.0;
@@ -921,7 +896,7 @@ namespace PH {
 		for (Index k = 0; k< matrix2.columns(); ++k) {
 			for (Index j = 0; j < matrix1.columns(); ++j) {
 				for (Index i = 0; i < matrix1.rows(); ++i) {
-					(*this)(i,k) += A(i,j)*X(j,k);
+					result(i,k) += matrix1(i,j)*matrix2(j,k);
 				}
 			}
 		}
@@ -936,17 +911,14 @@ namespace PH {
 		}
 		
 		// assume equality, disprove with single unequal element
-		bool isEqual = true;
 		
-		lhs.mapElements([](){
+		for (Index column = 0; column < lhs.columns(); column++) {
+			for (Index row = 0; row < lhs.rows(); row++) {
+				if(lhs(row,column) != rhs(row,column)) return false;
+			}
+		}
 		
-		});
-		
-		for (Index j=0; j<_columnCount; j++)
-			for (Index i=0; i<_rows; i++)
-		  equal &= (A._data[j][i] == _data[j][i]);
-		
-		return isEqual;
+		return true;
 	}
 	
 } // namespace PH

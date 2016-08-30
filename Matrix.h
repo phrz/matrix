@@ -126,7 +126,7 @@ namespace PH {
 		#pragma mark Serializable
 		
 		void serialize(std::ostream& output) const;
-		Matrix& deserialize(std::istream& input);
+		Matrix deserialize(std::istream& input);
 		/// @}
 		// end of Serializable implementation
 		
@@ -154,7 +154,7 @@ namespace PH {
 		}
 		
 		void mapElements(std::function<void(MathNumber&,Index,Index)> callback) {
-			mapColumns([callback](Raw1DArray& columnArray, Index c){
+			mapColumns([&callback](Raw1DArray& columnArray, Index c){
 				for(auto it = columnArray.begin(); it != columnArray.end(); ++it) {
 					Index r = it - columnArray.begin();
 					callback(*it, r, c);
@@ -187,7 +187,7 @@ namespace PH {
 		 */
 		#pragma mark Row or Column Accessors
 		
-		Raw1DArray& column(Index i);
+		Raw1DArray column(Index i);
 		Raw1DArray row(Index i);
 		Raw1DArray& operator[](Index i) {
 			// Removed
@@ -203,10 +203,10 @@ namespace PH {
 			@{
 		 */
 		#pragma mark Cell accessors
-		double& operator()(Index row, Index column);
-		double operator()(Index row, Index column) const;
-		double& operator()(Index linearIndex);
-		double operator()(Index linearIndex) const;
+		MathNumber& operator()(Index row, Index column);
+		const MathNumber& operator()(Index row, Index column) const;
+		MathNumber& operator()(Index linearIndex);
+		const MathNumber& operator()(Index linearIndex) const;
 		/// @}
 		// end of Cell accessors
 		
@@ -238,7 +238,7 @@ namespace PH {
 		Matrix& operator-=(const Matrix& matrix);
 		
 		Matrix& elementwiseMultiply(const Matrix& matrix);
-		Matrix operator*=(const MathNumber constant);
+		Matrix& operator*=(const MathNumber constant);
 		
 		Matrix& elementwiseDivide(const Matrix& matrix);
 		Matrix& operator/=(const MathNumber constant);
@@ -266,10 +266,8 @@ namespace PH {
 		/// @}
 		// end of In-place operations
 		
-		// derived matrix creation operations (C is the output, A calls the operation)
-		Matrix T();                                              // C = A^T
-		Matrix Extract(long int is, long int ie,                 // C = A(is:ie,js:je)
-		 long int js, long int je);
+		Matrix submatrix(Index beginRow, Index beginColumn,
+		 Index endRow, Index endColumn);
 		
 		// backward substitution on the linear system U*X = B, returning X as a new Matrix
 		//    U and B remain unchanged in this operation
@@ -285,7 +283,7 @@ namespace PH {
 		
 		// forward substitution on L*x = b, returning x as a new vector<double>
 		// L and b remain unchanged in this operation
-		static Vector ForwardSubstitution(const Matrix& L, const Vector& b);
+		static Vector forwardSubstitution(const Matrix& L, const Vector& b);
 		
 		// solves a linear system A*X = B, returning X as a new Matrix
 		// A and B are modified in this operation; X holds the result

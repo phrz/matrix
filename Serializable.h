@@ -22,7 +22,7 @@ namespace PH {
 		virtual ~Serializable() {}
 		
 		virtual void serialize(std::ostream& output) const = 0;
-		virtual SerialType& deserialize(std::istream& input) = 0;
+		virtual SerialType deserialize(std::istream& input) = 0;
 		
 		virtual void saveTo(const std::string& path) const {
 			std::ofstream file;

@@ -72,7 +72,7 @@ namespace PH {
 	}
 	
 	
-	Vector& Vector::deserialize(std::istream& input) {
+	Vector Vector::deserialize(std::istream& input) {
 		throw new NotImplementedException();
 	}
 	
@@ -136,7 +136,7 @@ namespace PH {
 	
 	/// In-place, constant (vector-by-number) addition.
 	Vector& Vector::operator+=(const MathNumber addend) {
-		this->mapElements([addend](MathNumber& element, Index i) {
+		this->mapElements([&addend](MathNumber& element, Index i) {
 			element += addend;
 		});
 		
@@ -149,7 +149,7 @@ namespace PH {
 			throw new std::invalid_argument("vector-by-vector addition: incompatible vector sizes.");
 		}
 		
-		this->mapElements([addends](MathNumber& element, Index i) {
+		this->mapElements([&addends](MathNumber& element, Index i) {
 			element += addends[i];
 		});
 		
@@ -160,7 +160,7 @@ namespace PH {
 	
 	/// In-place, constant (vector-by-number) subtraction
 	Vector& Vector::operator-=(const MathNumber subtrahend) {
-		this->mapElements([subtrahend](MathNumber& element, Index i) {
+		this->mapElements([&subtrahend](MathNumber& element, Index i) {
 			element -= subtrahend;
 		});
 		
@@ -173,7 +173,7 @@ namespace PH {
 			throw new std::invalid_argument("vector-by-vector subtraction: incompatible vector sizes.");
 		}
 		
-		this->mapElements([subtrahends](MathNumber& element, Index i) {
+		this->mapElements([&subtrahends](MathNumber& element, Index i) {
 			element -= subtrahends[i];
 		});
 		
@@ -184,7 +184,7 @@ namespace PH {
 	
 	/// In-place, constant (vector-by-number) multiplication
 	Vector& Vector::operator*=(const MathNumber multiplier) {
-		this->mapElements([multiplier](MathNumber& element, Index i) {
+		this->mapElements([&multiplier](MathNumber& element, Index i) {
 			element *= multiplier;
 		});
 		
@@ -192,12 +192,12 @@ namespace PH {
 	}
 	
 	/// In-place, elementwise (vector-by-vector) multiplication
-	Vector& Vector::operator*=(const MathVector& multipliers) {
+	Vector& Vector::operator*=(const Vector& multipliers) {
 		if (this->size() != multipliers.size()) {
 			throw new std::invalid_argument("vector-by-vector multiplication: incompatible vector sizes.");
 		}
 
-		this->mapElements([multipliers](MathNumber& element, Index i) {
+		this->mapElements([&multipliers](MathNumber& element, Index i) {
 			element *= multipliers[i];
 		});
 		
@@ -208,7 +208,7 @@ namespace PH {
 	
 	/// In-place, constant (vector-by-number) division
 	Vector& Vector::operator/=(const MathNumber divisor) {
-		this->mapElements([divisor](MathNumber& element, Index i) {
+		this->mapElements([&divisor](MathNumber& element, Index i) {
 			element /= divisor;
 		});
 		
@@ -221,7 +221,7 @@ namespace PH {
 			throw new std::invalid_argument("vector-by-vector division: incompatible vector sizes.");
 		}
 		
-		this->mapElements([divisors](MathNumber& element, Index i) {
+		this->mapElements([&divisors](MathNumber& element, Index i) {
 			element /= divisors[i];
 		});
 		
@@ -232,7 +232,7 @@ namespace PH {
 	
 	/// In-place, constant (vector-by-number) exponentiation
 	Vector& Vector::operator^=(const MathNumber exponent) {
-		this->mapElements([exponent](MathNumber& element, Index i) {
+		this->mapElements([&exponent](MathNumber& element, Index i) {
 			element = std::pow(element, exponent);
 		});
 		
@@ -240,12 +240,12 @@ namespace PH {
 	}
 	
 	/// In-place, elementwise (vector-by-vector) exponentiation
-	MathVector& Vector::operator^=(const Vector& exponents) {
+	Vector& Vector::operator^=(const Vector& exponents) {
 		if (this->size() != exponents.size()) {
 			throw new std::invalid_argument("vector-by-vector exponentiation: incompatible vector sizes.");
 		}
 		
-		this->mapElements([exponents](MathNumber& element, Index i){
+		this->mapElements([&exponents](MathNumber& element, Index i){
 			element = std::pow(element, exponents[i]);
 		});
 		
@@ -254,7 +254,7 @@ namespace PH {
 	
 	// Vector Dot Product
 	// inner product between two vectors
-	static MathNumber Vector::dot(const Vector& v1, const Vector& v2) {
+	MathNumber Vector::dot(const Vector& v1, const Vector& v2) {
 		if (v1.size() != v2.size()) {
 			throw new std::invalid_argument("dot product: incompatible vector sizes (must be same)");
 		}
@@ -328,7 +328,7 @@ namespace PH {
 	// Result = Constant - Vector
 	Vector operator-(const MathNumber constant, const Vector& vector) {
 		Vector result = vector;
-		result.mapElements([constant](MathNumber& element, Index i){
+		result.mapElements([&constant](MathNumber& element, Index i){
 			element = constant - element;
 		});
 		return result;
@@ -356,13 +356,13 @@ namespace PH {
 	// Result = Vector * Vector
 	Vector operator*(const Vector& vector1, const Vector& vector2) {
 		Vector result = vector1;
-		vector1 *= vector2;
+		result *= vector2;
 		return result;
 	}
 	
 	// Result = Vector / Constant
 	Vector operator/(const Vector& vector, const MathNumber constant) {
-		Vector result = vector1;
+		Vector result = vector;
 		result /= constant;
 		return result;
 	}
@@ -370,7 +370,7 @@ namespace PH {
 	// Result = Constant / Vector
 	Vector operator/(const MathNumber constant, const Vector& vector) {
 		Vector result = vector;
-		result.mapElements([constant](MathNumber& element, Index i){
+		result.mapElements([&constant](MathNumber& element, Index i){
 			element = constant / element;
 		});
 		return result;
@@ -385,15 +385,15 @@ namespace PH {
 	
 	// Result = Vector ^ Constant
 	Vector operator^(const Vector& vector, const MathNumber constant) {
-		Vector result = vector
+		Vector result = vector;
 		result ^= constant;
 		return result;
 	}
 	
 	// Result = Constant ^ Vector
-	Vector operator^(const MathNumber constant, const MathVector& vector) {
+	Vector operator^(const MathNumber constant, const Vector& vector) {
 		Vector result = vector;
-		result.mapElements([constant](MathNumber& element, Index i){
+		result.mapElements([&constant](MathNumber& element, Index i){
 			element = std::pow(constant, element);
 		});
 		return result;
@@ -407,7 +407,7 @@ namespace PH {
 	}
 	
 	// streaming output routine
-	ostream& operator<<(ostream& os, const MathVector& v) {
+	std::ostream& operator<<(std::ostream& os, const Vector& v) {
 		for (Index i=0; i<v.size(); i++)
 			os << "  " << v[i];
 		os << "\n";
