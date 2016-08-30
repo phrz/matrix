@@ -13,8 +13,41 @@ namespace PH {
 		this->resize(r,c);
 	}
 	
+	Matrix::Matrix(std::initializer_list<std::initializer_list<double>> l) {
+		
+		(*this) = l;
+		
+	}
 	
-	template<int r, int c>
+	
+	Matrix& Matrix::operator=(std::initializer_list<std::initializer_list<double>> l) {
+		// row major array to column major data structure
+		Index listRowCount = l.size();
+		Index listColumnCount = l.begin()->size();
+		this->resize(listRowCount, listColumnCount);
+		
+		// iterate rows
+		Index row = 0;
+		for(auto listRow: l) {
+			if(listRow.size() != listColumnCount) {
+				throw new std::invalid_argument("Matrix initializer list constructor: rows in the initializer list must have identical length.");
+			}
+			
+			// iterate columns within row
+			Index column = 0;
+			for(auto listRowElement: listRow) {
+				(*this)(row, column) = listRowElement;
+				++column;
+			}
+			
+			++row;
+		} // row iterator
+		
+		return *this;
+	}
+	
+	
+	template<Index r, Index c>
 	Matrix Matrix::fromArray(Raw1DArray source) {
 		if (r * c != source.size()) {
 			throw new std::invalid_argument("Matrix::fromArray: the given array could not properly fit into the requested matrix dimensions.");

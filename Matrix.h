@@ -90,8 +90,11 @@ namespace PH {
 		/// Size constructor (zero-fills matrix)
 		Matrix(Index r, Index c);
 		
+		Matrix(std::initializer_list<std::initializer_list<double>> l);
+		Matrix& operator=(std::initializer_list<std::initializer_list<double>> l);
+		
 		/// Array wrap constructor using raw array
-		template<int r, int c>
+		template<Index r, Index c>
 		static Matrix fromArray(Raw1DArray source);
 		
 		Matrix(Raw2DArray source);
