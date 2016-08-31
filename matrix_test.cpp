@@ -77,11 +77,19 @@ int main(int argc, char* argv[]) {
 	a.saveTo("a_data.txt");
 	
 
+	
 	// testing Matrix deserialize
 	double tol = 1.0e-15;
 	
 	Matrix read_test1a = Matrix::random(3,4);
+	read_test1a *= 100000;
+	read_test1a.mapElements([](MathNumber& element, Index r, Index c) {
+		element = trunc(element);
+		element /= 10000;
+	});
 	read_test1a.saveTo("tmp.txt");
+	
+	
 	
 	Matrix read_test1b = Matrix().loadFrom("tmp.txt");
 	
@@ -89,9 +97,10 @@ int main(int argc, char* argv[]) {
 	if (Matrix::infNorm(read_test1_error) < tol) {
 		std::cout << "deserialize test 1 passed\n";
 	} else {
-		std::cout << "deserialize test 1 failed, ||error|| = " << InfNorm(read_test1_error) << endl;
+		std::cout << "deserialize test 1 failed, ||error|| = " << Matrix::infNorm(read_test1_error) << std::endl;
 		std::cout << "  read_test1a = \n" << read_test1a;
 		std::cout << "  read_test1b = \n" << read_test1b;
+		std::cout << (read_test1a == read_test1b ? "Equal" : "Nonequal") << std::endl;
 	}
 /*
   Matrix read_test2a = Random(12,1);

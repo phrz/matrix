@@ -319,6 +319,8 @@ namespace PH {
 	Matrix operator-(const Matrix& matrix, const MathNumber constant);
 	Matrix operator-(const MathNumber constant, const Matrix& matrix);
 	Matrix operator-(const Matrix& matrix1, const Matrix& matrix2);
+	
+	bool withinTolerance(const MathNumber a, const MathNumber b, const double precision = 1e-4);
 
 } // namespace PH
 

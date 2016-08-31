@@ -7,7 +7,11 @@ using namespace std;
 #define STOL 1.e-15
 
 namespace PH {
-
+	
+	Matrix::Matrix() {
+		this->resize(0,0);
+	}
+	
 	// general constructor (initializes values to 0.0)
 	Matrix::Matrix(Index r, Index c) {
 		this->resize(r,c);
@@ -64,16 +68,16 @@ namespace PH {
 
 	// constructor that copies input data (2D vector)
 	Matrix::Matrix(Raw2DArray source) {
-		_columnCount = source.size();
-		_rowCount = source[0].size();
+		// row major matrix constructor
+		this->resize(source.size(), source[0].size());
 		
-		for (Index column = 0; column < _columnCount; column++) {
-			if (source[column].size() != _rowCount) {
-				throw new std::invalid_argument("Matrix Raw2DArray constructor: rows in the 2D array must have identical length.");
+		for (Index row = 0; row < _rowCount; ++row) {
+			if (source[row].size() != _columnCount) {
+				throw new std::invalid_argument("Matrix Raw2DArray constructor: rows in the 2D array must have identical length. Make sure the array provided is row-major.");
 			}
 			
-			for (Index row = 0; row < _rowCount; row++) {
-				(*this)(row, column) = source[column][row];
+			for (Index column = 0; column < _columnCount; ++column) {
+				(*this)(row, column) = source[row][column];
 			}
 		}
 	}
@@ -199,47 +203,54 @@ namespace PH {
 	}
 	
 	Matrix Matrix::deserialize(std::istream& input) {
+		
 		// determine matrix size
-		Index newRowCount = 0, newColumnCount = 0;
-		std::string line;
+		Index newRowCount = 0, newColumnCount = 0, currentRow = 0, currentColumn = 0;
+		Raw2DArray newData = Raw2DArray();
+		std::string line = "";
 		
 		while (getline(input, line)) {
 			std::istringstream iss(line);
-			float columnsOnRow;
-			Index n = 0;
-			while (iss >> columnsOnRow) {
-				n++;
+			double element = 0.0;
+			currentColumn = 0;
+			
+			newData.push_back(Raw1DArray());
+			auto* row = &(newData.back());
+			
+			while (iss >> element) {
+//				std::cout << "(" << currentRow << ", " << currentColumn << "): " << element << std::endl;
+				row->push_back(element);
+				element = 0.0;
+				++currentColumn;
 			}
 			
-			if((n > 0) && (newRowCount == 0)) {
-				// first row, set _columnCount
-				newColumnCount = n;
+			if((currentColumn != 0) && (newRowCount == 0)) {
+				// first row, set column number
+				newColumnCount = currentColumn;
 			}
 			
-			if ((n > 0) && (n != _columnCount)) {
+			if ((currentColumn != 0) && (currentColumn != newColumnCount)) {
 				throw new std::runtime_error("matrix deserialize: not all rows had same column count.");
 			}
 			
-			if (n > 0) {
-				++newRowCount;
+			if (currentColumn != 0) {
+				++currentRow;
+			} else {
+				// pop the empty row array we added
+				newData.pop_back();
 			}
 		}
 		
-		input.seekg(0, ios::beg);
+		// last row number is total row count
+		newRowCount = currentRow;
+//		std::cout << "Parsed with " << newRowCount << " x " << newColumnCount << std::endl;
 		
 		// create matrix of desired size
-		Matrix result = Matrix(newRowCount, newColumnCount);
-		
-		// load matrix based on data from file
-		for (Index row = 0; row < _rowCount; ++row) {
-			
-			getline(input, line);
-			std::istringstream iss(line);
-			
-			for (Index column = 0; column < newColumnCount; ++column) {
-				iss >> result(row, column);
-			}
-		}
+		Matrix result = Matrix(newData);
+		std::cout << result.rows() << ", " << result.columns() << " (Actual dimensions)" << std::endl;
+		std::cout << newRowCount << ", " << newColumnCount << " (Expected)" << std::endl;
+		std::cout << result << std::endl;
+		std::cout.flush();
 		
 		return result;
 	}
@@ -275,13 +286,14 @@ namespace PH {
 		return _data[linearIndex / _rowCount][linearIndex % _rowCount];
 	}
 	
+	
 	// build a string representation and return it
 	std::string Matrix::str() const {
 		auto ss = std::stringstream();
 		
 		for (Index row = 0; row < _rowCount; row++) {
 			for (Index column = 0; column < _columnCount; column++) {
-				ss << "    " << (*this)(row, column);
+				ss << "    " << std::fixed << (*this)(row, column);
 			}
 			ss << std::endl;
 		}
@@ -289,6 +301,7 @@ namespace PH {
 		return ss.str();
 	}
 
+	
 	// streaming output routine
 	ostream& operator<<(ostream& os, const Matrix& A) {
 		os << A.str();
@@ -300,7 +313,7 @@ namespace PH {
 	// A = (a*A) + (b*B)
 	Matrix& Matrix::linearSumInPlace(MathNumber matrix1Constant, MathNumber matrix2Constant, const Matrix& matrix2) {
 		// check that array sizes match
-		if (this->dimensions() == matrix2.dimensions()) {
+		if (this->dimensions() != matrix2.dimensions()) {
 			throw new std::invalid_argument("matrix-by-matrix linear sum (a*A+b*B): incompatible matrix dimensions (must be same)");
 		}
 		
@@ -971,7 +984,14 @@ namespace PH {
 		
 		for (Index column = 0; column < lhs.columns(); column++) {
 			for (Index row = 0; row < lhs.rows(); row++) {
-				if(lhs(row,column) != rhs(row,column)) return false;
+//				bool isEqual = withinTolerance(lhs(row,column), rhs(row,column));
+				MathNumber left = lhs(row,column);
+				MathNumber right = rhs(row,column);
+				bool isEqual = withinTolerance(left,right);
+				if(not isEqual) {
+					std::cout << std::fixed << left << " != " << std::fixed << right << std::endl;
+					return false;
+				}
 			}
 		}
 		
@@ -1001,5 +1021,19 @@ namespace PH {
 		result -= matrix2;
 		return result;
 	}
+	
+	
+	bool withinTolerance(const MathNumber a, const MathNumber b, const double precision) { // precision default = 1e-6
+		int aExp, bExp;
+		double aFrac, bFrac;
+		
+		aFrac = std::frexp(a, &aExp);
+		bFrac = std::frexp(b, &bExp);
+		
+		// are the significands within the difference tolerance,
+		// and are exponents the same?
+		return (std::abs(aFrac - bFrac) < precision) && (aExp == bExp);
+	}
+	
 	
 } // namespace PH
