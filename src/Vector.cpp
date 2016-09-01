@@ -64,16 +64,26 @@ namespace PH {
 	
 	// Serializable interface
 	void Vector::serialize(std::ostream& output) const {
-		
-		// [CITE] http://stackoverflow.com/a/6693088/3592716
-		// quick way to concatenate STL container with commas
-		std::ostringstream ss;
-		std::copy(_data.begin(), _data.end() - 1, std::ostream_iterator<int>(ss, ", "));
+		output << str();
 	}
 	
 	
 	Vector Vector::deserialize(std::istream& input) {
-		throw new NotImplementedException();
+		
+		auto newData = Raw1DArray();
+		std::string line = "";
+		
+		while (getline(input, line)) {
+			
+			std::istringstream iss(line);
+			double element = 0.0;
+			
+			while (iss >> element) {
+				newData.push_back(element);
+			}
+		}
+		
+		return Vector(newData);
 	}
 	
 	
@@ -295,6 +305,17 @@ namespace PH {
 			sum += std::abs(v[i]);
 		}
 		return sum;
+	}
+	
+	// build a string representation and return it
+	std::string Vector::str() const {
+		auto ss = std::stringstream();
+		
+		for (Index i = 0; i < size(); ++i) {
+			ss << "    " << std::fixed << (*this)[i];
+		}
+		
+		return ss.str();
 	}
 	
 	#pragma mark Functional Operators

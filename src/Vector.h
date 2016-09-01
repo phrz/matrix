@@ -92,6 +92,8 @@ namespace PH {
 		static MathNumber infNorm(const Vector& v);
 		static MathNumber oneNorm(const Vector& v);
 		
+		std::string str() const;
+		
 	}; // class Vector
 	
 	Vector operator+(const Vector& v, const MathNumber c);

@@ -206,7 +206,7 @@ namespace PH {
 		
 		// determine matrix size
 		Index newRowCount = 0, newColumnCount = 0, currentRow = 0, currentColumn = 0;
-		Raw2DArray newData = Raw2DArray();
+		auto newData = Raw2DArray();
 		std::string line = "";
 		
 		while (getline(input, line)) {
@@ -218,7 +218,6 @@ namespace PH {
 			auto* row = &(newData.back());
 			
 			while (iss >> element) {
-//				std::cout << "(" << currentRow << ", " << currentColumn << "): " << element << std::endl;
 				row->push_back(element);
 				element = 0.0;
 				++currentColumn;
@@ -243,14 +242,9 @@ namespace PH {
 		
 		// last row number is total row count
 		newRowCount = currentRow;
-//		std::cout << "Parsed with " << newRowCount << " x " << newColumnCount << std::endl;
 		
 		// create matrix of desired size
 		Matrix result = Matrix(newData);
-		std::cout << result.rows() << ", " << result.columns() << " (Actual dimensions)" << std::endl;
-		std::cout << newRowCount << ", " << newColumnCount << " (Expected)" << std::endl;
-		std::cout << result << std::endl;
-		std::cout.flush();
 		
 		return result;
 	}
