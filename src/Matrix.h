@@ -221,7 +221,7 @@ namespace PH {
 		 */
 		#pragma mark Output routines
 		
-		std::string str() const;
+		std::string str(int precision = fullPrecision) const;
 		
 		friend std::ostream& operator<<(std::ostream& os, const Matrix& A);
 		/// @}

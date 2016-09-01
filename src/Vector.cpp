@@ -308,11 +308,11 @@ namespace PH {
 	}
 	
 	// build a string representation and return it
-	std::string Vector::str() const {
+	std::string Vector::str(int precision) const {
 		auto ss = std::stringstream();
 		
 		for (Index i = 0; i < size(); ++i) {
-			ss << "    " << std::fixed << (*this)[i];
+			ss << "    " << std::setprecision(precision) << (*this)[i];
 		}
 		
 		return ss.str();
@@ -429,9 +429,7 @@ namespace PH {
 	
 	// streaming output routine
 	std::ostream& operator<<(std::ostream& os, const Vector& v) {
-		for (Index i=0; i<v.size(); i++)
-			os << "  " << v[i];
-		os << "\n";
+		os << v.str(displayPrecision);
 		return os;
 	}
 	

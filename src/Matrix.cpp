@@ -282,12 +282,12 @@ namespace PH {
 	
 	
 	// build a string representation and return it
-	std::string Matrix::str() const {
+	std::string Matrix::str(int precision) const {
 		auto ss = std::stringstream();
 		
 		for (Index row = 0; row < _rowCount; row++) {
 			for (Index column = 0; column < _columnCount; column++) {
-				ss << "    " << std::fixed << (*this)(row, column);
+				ss << "    " << std::setprecision(precision) << (*this)(row, column);
 			}
 			ss << std::endl;
 		}
@@ -298,7 +298,7 @@ namespace PH {
 	
 	// streaming output routine
 	ostream& operator<<(ostream& os, const Matrix& A) {
-		os << A.str();
+		os << A.str(displayPrecision);
 		return os;
 	}
 	

@@ -18,6 +18,12 @@
 #endif
 
 #include <vector>
+#include <limits>
+
+// the precision levels for serializing vs displaying
+// numbers in Matrices and Vectors
+static int fullPrecision = std::numeric_limits<double>::digits10 + 1;
+static int displayPrecision = 6;
 
 using  MathNumber = double;
 using  Raw1DArray = std::vector<MathNumber>;
