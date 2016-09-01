@@ -19,7 +19,14 @@ int GramSchmidt(Matrix& X);
 
 // Example routine to test the Mat class
 int main(int argc, char* argv[]) {
-
+	
+	// RANGE TESTS
+//	auto A = Matrix::random(5, 5);
+//	std::cout << "A = " << std::endl << A << std::endl;
+//	
+//	auto B = A.range(0, 4, 4, 4);
+//	std::cout << "B = " << std::endl << B << std::endl;
+	
 	// create a row vector of length 5
 	Matrix a(1,5);
 

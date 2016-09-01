@@ -415,6 +415,36 @@ namespace PH {
 	}
 	
 	
+	Matrix Matrix::range(Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
+		
+		Index newRows = endRow - beginRow + 1;
+		Index newColumns = endColumn - beginColumn + 1;
+		
+		if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
+			
+			throw new std::invalid_argument("range: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(rows())+", "+std::to_string(columns())+")");
+			
+		} else if (endRow < beginRow || endColumn < beginColumn) {
+			
+			throw new std::invalid_argument("range: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ")");
+			
+		} else if (newRows == 0 || newColumns == 0) {
+			
+			throw new std::invalid_argument("range: cannot build a submatrix with a zero-size dimension.");
+			
+		}
+		
+		Matrix submatrix(newRows, newColumns);
+		
+		submatrix.mapElements([&](MathNumber& newElement, Index r, Index c) {
+			// map this matrix's (r+beginRow, c+beginColumn) => (r, c) in the result
+			// for all (r, c) in this matrix.
+			newElement = (*this)(r+beginRow, c+beginColumn);
+		});
+		
+		return submatrix;
+	}
+	
 	
 	void Matrix::insert(const Matrix& source, Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
 		
@@ -426,11 +456,11 @@ namespace PH {
 			
 		} else if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
 			
-			throw new std::invalid_argument("insert: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+")");
+			throw new std::invalid_argument("insert: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+")");
 			
 		} else if (endRow < beginRow || endColumn < beginColumn) {
 			
-			throw new std::invalid_argument("insert: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ")");
+			throw new std::invalid_argument("insert: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ")");
 		}
 
 		// perform operation

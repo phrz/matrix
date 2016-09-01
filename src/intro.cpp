@@ -8,7 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include "matrix.hpp"
+#include "Matrix.h"
 using namespace std;
 
 

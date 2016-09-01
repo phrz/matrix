@@ -248,6 +248,10 @@ namespace PH {
 		Matrix& elementwiseDivide(const Matrix& matrix);
 		Matrix& operator/=(const MathNumber constant);
 		
+		/// extract/insert routines for portions of vectors
+		/// y = x(is,js:ie,je)
+		Matrix range(Index beginRow, Index beginColumn, Index endRow, Index endColumn);
+		
 		/// This(beginRow:beginColumn,endRow:endColumn) = Source
 		void insert(const Matrix& source, Index beginRow, Index beginColumn, Index endRow, Index endColumn);
 		
