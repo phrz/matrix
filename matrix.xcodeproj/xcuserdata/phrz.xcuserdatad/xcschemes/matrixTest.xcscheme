@@ -63,15 +63,15 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-r console"
+            argument = "--reporter console"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-d yes"
+            argument = "--break"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-s"
+            argument = "--durations yes"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
