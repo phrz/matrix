@@ -317,6 +317,7 @@ namespace PH {
 	# pragma mark Functional Operators
 	
 	Matrix operator*(const Matrix& matrix1, const Matrix& matrix2);
+	Vector operator*(const Matrix& matrix, const Vector& vector);
 	
 	bool operator==(const Matrix& lhs, const Matrix& rhs);
 	

@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		275FA93C1D723878003B6BE3 /* libgtest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 275FA93B1D723878003B6BE3 /* libgtest.a */; };
 		27E670E41D787F930090E8F1 /* GramSchmidt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670D91D787F930090E8F1 /* GramSchmidt.cpp */; };
 		27E670E61D787F930090E8F1 /* matrix_test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670DB1D787F930090E8F1 /* matrix_test.cpp */; };
 		27E670E71D787F930090E8F1 /* Matrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670DC1D787F930090E8F1 /* Matrix.cpp */; };
@@ -44,6 +43,7 @@
 		275FA92E1D72136F003B6BE3 /* matrixTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = matrixTest; sourceTree = BUILT_PRODUCTS_DIR; };
 		275FA9391D723422003B6BE3 /* gtest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = gtest.framework; path = ../../../../Library/Frameworks/gtest.framework; sourceTree = "<group>"; };
 		275FA93B1D723878003B6BE3 /* libgtest.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgtest.a; path = ../../../../usr/local/lib/libgtest.a; sourceTree = "<group>"; };
+		27C6EE441D79CC71002A8B98 /* catch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = catch.h; path = lib/catch.h; sourceTree = "<group>"; };
 		27E670D91D787F930090E8F1 /* GramSchmidt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GramSchmidt.cpp; path = src/GramSchmidt.cpp; sourceTree = "<group>"; };
 		27E670DA1D787F930090E8F1 /* intro.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = intro.cpp; path = src/intro.cpp; sourceTree = "<group>"; };
 		27E670DB1D787F930090E8F1 /* matrix_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = matrix_test.cpp; path = src/matrix_test.cpp; sourceTree = "<group>"; };
@@ -71,7 +71,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				275FA93C1D723878003B6BE3 /* libgtest.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,9 +80,9 @@
 		2741622A1D6F6AE000D78411 = {
 			isa = PBXGroup;
 			children = (
+				27C6EE431D79CC5F002A8B98 /* lib */,
 				27E670F01D78811A0090E8F1 /* .gitignore */,
 				27E670EC1D787FA60090E8F1 /* test */,
-				27E670EA1D787F9B0090E8F1 /* MatrixTest.cpp */,
 				27E670D91D787F930090E8F1 /* GramSchmidt.cpp */,
 				27E670DA1D787F930090E8F1 /* intro.cpp */,
 				27E670DB1D787F930090E8F1 /* matrix_test.cpp */,
@@ -118,9 +117,18 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		27C6EE431D79CC5F002A8B98 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				27C6EE441D79CC71002A8B98 /* catch.h */,
+			);
+			name = lib;
+			sourceTree = "<group>";
+		};
 		27E670EC1D787FA60090E8F1 /* test */ = {
 			isa = PBXGroup;
 			children = (
+				27E670EA1D787F9B0090E8F1 /* MatrixTest.cpp */,
 			);
 			name = test;
 			sourceTree = "<group>";

@@ -998,6 +998,26 @@ namespace PH {
 		return result;
 	}
 	
+	
+	// Result = Matrix * Vector
+	Vector operator*(const Matrix& matrix, const Vector& vector) {
+		
+		Vector result(matrix.rows());
+		
+		if (matrix.columns() != vector.size()) {
+			throw new std::invalid_argument("matrix-vector product: incompatible matrix/vector sizes in A*v");
+		}
+		
+		for(Index column = 0; column < matrix.columns(); ++column) {
+			for(Index row = 0; row < matrix.rows(); ++row) {
+				result += matrix(row,column) * vector[column];
+			}
+		}
+		
+		return result;
+	}
+	
+	
 	bool operator==(const Matrix& lhs, const Matrix& rhs) {
 		
 		if (lhs.dimensions() != rhs.dimensions()) {
