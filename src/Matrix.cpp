@@ -73,7 +73,7 @@ namespace PH {
 	
 	Matrix& Matrix::operator=(Matrix&& source) {
 		if(this != &source) {
-			this->resize(source.rows(), source.columns())
+			this->resize(source.rows(), source.columns());
 			
 			_data = std::move(source._data);
 			
