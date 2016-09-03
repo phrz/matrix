@@ -20,6 +20,9 @@
 #include <vector>
 #include <limits>
 
+// singularity tolerance
+#define STOL 1.e-15
+
 // the precision levels for serializing vs displaying
 // numbers in Matrices and Vectors
 static int fullPrecision = std::numeric_limits<double>::digits10 + 1;

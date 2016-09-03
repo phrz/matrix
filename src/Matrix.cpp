@@ -1,26 +1,24 @@
-
 #include "Matrix.h"
 
-using namespace std;
-
-// singularity tolerance
-#define STOL 1.e-15
-
 namespace PH {
+	
+	
+#pragma mark - Constructors
 	
 	Matrix::Matrix() {
 		this->resize(0,0);
 	}
 	
-	// general constructor (initializes values to 0.0)
+	
 	Matrix::Matrix(Index r, Index c) {
 		this->resize(r,c);
 	}
 	
+	
+#pragma mark Initializer list constructors
+	
 	Matrix::Matrix(std::initializer_list<std::initializer_list<double>> l) {
-		
 		(*this) = l;
-		
 	}
 	
 	
@@ -51,6 +49,44 @@ namespace PH {
 	}
 	
 	
+#pragma mark Copy constructors
+	
+	Matrix::Matrix(const Matrix& source) {
+		(*this) = source;
+	}
+	
+	
+	Matrix& Matrix::operator=(const Matrix& source) {
+		this->resize(source.rows(), source.columns());
+		this->_data = source._data;
+		
+		return *this;
+	}
+	
+	
+#pragma mark Move constructors
+	
+	Matrix::Matrix(Matrix&& source) {
+		(*this) = std::move(source);
+	}
+	
+	
+	Matrix& Matrix::operator=(Matrix&& source) {
+		if(this != &source) {
+			this->resize(source.rows(), source.columns())
+			
+			_data = std::move(source._data);
+			
+			source.resize(0,0);
+			source._data = Raw2DArray();
+		}
+		
+		return *this;
+	}
+	
+	
+#pragma mark Type conversion constructors
+	
 	template<Index r, Index c>
 	Matrix Matrix::fromArray(Raw1DArray source) {
 		if (r * c != source.size()) {
@@ -65,9 +101,14 @@ namespace PH {
 		
 		return result;
 	}
-
-	// constructor that copies input data (2D vector)
-	Matrix::Matrix(Raw2DArray source) {
+	
+	
+	Matrix::Matrix(const Raw2DArray& source) {
+		(*this) = source;
+	}
+	
+	
+	Matrix& Matrix::operator=(const Raw2DArray& source) {
 		// row major matrix constructor
 		this->resize(source.size(), source[0].size());
 		
@@ -80,10 +121,13 @@ namespace PH {
 				(*this)(row, column) = source[row][column];
 			}
 		}
+		
+		return *this;
 	}
 	
 	
-	// create a new n by n identity matrix
+#pragma mark - Convenience factories
+	
 	Matrix Matrix::eye(const Index size) {
 		Matrix I(size, size);
 		for (Index i = 0; i < size; i++) {
@@ -93,16 +137,7 @@ namespace PH {
 	}
 	
 	
-	// create a matrix with uniformly-distributed random numbers in [0,1]
 	Matrix Matrix::random(Index rows, Index columns) {
-		if (rows == 0 || columns == 0) {
-			throw new std::invalid_argument("randomMatrixOfSize expects a vector size argument > 0.");
-		}
-		
-		// Create random device for a uniform integer
-		// distribution.
-		
-		// This is much like MATLAB's rand().
 		std::random_device randomDevice;
 		std::mt19937 generator(randomDevice());
 		std::uniform_real_distribution<> dist(0, 1);
@@ -115,92 +150,41 @@ namespace PH {
 		return result;
 	}
 
-	
-	
-	// create a new matrix of linearly spaced data
-	Matrix Matrix::linSpace(MathNumber a, MathNumber b, Index m, Index n) {
-		Matrix C(m,n);
-		MathNumber h = (b-a)/(m*n-1);
-		Index idx=0;
-		for (Index j=0; j<n; j++)
-			for (Index i=0; i<m; i++)
-				C._data[j][i] = a + (idx++)*h;
-		return C;
-	}
-	
-	// create a new column-vector matrix of logarithmically spaced data
-	Matrix Matrix::logSpace(MathNumber a, MathNumber b, Index m, Index n) {
-		Matrix C(m,n);
-		MathNumber h = (b-a)/(m*n-1);
-		Index idx=0;
-		for (Index j=0; j<n; j++)
-			for (Index i=0; i<m; i++)
-				C._data[j][i] = pow(10.0, a + (idx++)*h);
-		return C;
-	}
-	
-	
-	// Raw2DArray -> conversion by assignment constructor
-	Matrix& Matrix::operator=(const Raw2DArray& source) {
-		// provided array is row-major
-		_rowCount = source.size();
-		_columnCount = source[0].size();
-		for(auto row: source) {
-			// confirm column size consistency
-			if(row.size() != _columnCount) {
-				throw new std::invalid_argument("Matrix Raw2DArray assignment constructor: each row must have the same number of columns.");
-			}
-		}
-		this->_data = source;
-		return *this;
-	}
 
-	// copy constructor
-	Matrix::Matrix(const Matrix& A) {
-		this->resize(A.rows(), A.columns());
-
-		for (Index column = 0; column < _columnCount; column++) {
-			_data[column] = A._data[column];
-		}
-	}
-
-	// C = A
-	Matrix& Matrix::operator=(const Matrix& A) {
-		this->resize(A.rows(), A.columns());
-
-		for (Index column = 0; column < _columnCount; column++) {
-			_data[column] = A._data[column];
-		}
+	Matrix Matrix::linSpace(MathNumber a, MathNumber b, Index rows, Index columns) {
+		Matrix result(rows, columns);
 		
-		return *this;
-	}
-
-	Matrix::Matrix(Matrix&& A) {
-		*this = std::move(A);
-	}
-
-	/// Move assignment operator
-	Matrix& Matrix::operator=(Matrix&& A) {
-		if(this != &A) {
-			_rowCount = _columnCount = 0;
-			_data.resize(0);
-			
-			_rowCount = A.rows();
-			_columnCount = A.columns();
-			
-			_data = std::move(A._data);
-			A._rowCount = 0;
-			A._columnCount = 0;
-			A._data = Raw2DArray();
-		}
-		return *this;
+		MathNumber range = b - a;
+		MathNumber delta = range / (rows * columns - 1);
+		
+		result.mapElements([&](MathNumber& element, Index r, Index c) {
+			element = a + (r * c + c) * delta;
+		});
+		
+		return result;
 	}
 	
 	
-	// Serializable interface
+	Matrix Matrix::logSpace(MathNumber a, MathNumber b, Index rows, Index columns) {
+		Matrix result(rows, columns);
+		
+		MathNumber range = b - a;
+		MathNumber delta = range / (rows * columns - 1);
+		
+		result.mapElements([&](MathNumber& element, Index r, Index c) {
+			element = std::pow(10.0, a + (r * c + c) * delta);
+		});
+		
+		return result;
+	}
+	
+	
+#pragma mark - Serializable implementation
+	
 	void Matrix::serialize(std::ostream& output) const {
 		output << str();
 	}
+	
 	
 	Matrix Matrix::deserialize(std::istream& input) {
 		
@@ -250,13 +234,14 @@ namespace PH {
 	}
 
 
-	// column accessor routines
-	Raw1DArray Matrix::column(Index i) {
+#pragma mark - Data accessors
+	
+	Raw1DArray Matrix::copyColumn(Index i) {
 	  return _data[i];
 	}
 	
-	// row accessor (copy) routine
-	Raw1DArray Matrix::row(Index row) {
+	
+	Raw1DArray Matrix::copyRow(Index row) {
 		Raw1DArray rowArray = Raw1DArray(_columnCount);
 		
 		for (Index column = 0; column < _columnCount; column++) {
@@ -266,22 +251,29 @@ namespace PH {
 		return rowArray;
 	}
 
-	// Matlab/Fortran Matrix accessors (row, column)
+	
 	MathNumber& Matrix::operator()(Index row, Index column) {
 		return _data[column][row];
 	}
+	
+	
 	const MathNumber& Matrix::operator()(Index row, Index column) const {
 		return _data[column][row];
 	}
+	
+	
 	MathNumber& Matrix::operator()(Index linearIndex) {
 		return _data[linearIndex / _rowCount][linearIndex % _rowCount];
 	}
+	
+	
 	const MathNumber& Matrix::operator()(Index linearIndex) const {
 		return _data[linearIndex / _rowCount][linearIndex % _rowCount];
 	}
 	
+
+#pragma mark - Output routines
 	
-	// build a string representation and return it
 	std::string Matrix::str(int precision) const {
 		auto ss = std::stringstream();
 		
@@ -296,15 +288,14 @@ namespace PH {
 	}
 
 	
-	// streaming output routine
-	ostream& operator<<(ostream& os, const Matrix& A) {
+	std::ostream& operator<<(std::ostream& os, const Matrix& A) {
 		os << A.str(displayPrecision);
 		return os;
 	}
 	
-	# pragma mark In-Place Member Operations
-
-	// A = (a*A) + (b*B)
+	
+# pragma mark - In-place transformations
+	
 	Matrix& Matrix::linearSumInPlace(MathNumber matrix1Constant, MathNumber matrix2Constant, const Matrix& matrix2) {
 		// check that array sizes match
 		if (this->dimensions() != matrix2.dimensions()) {
@@ -323,8 +314,8 @@ namespace PH {
 		return *this;
 	}
 
-	
-	// ADDITION
+
+#pragma mark Addition
 	
 	Matrix& Matrix::operator+=(const MathNumber constant) {
 		mapElements([&constant](MathNumber& element, Index row, Index column) {
@@ -334,6 +325,7 @@ namespace PH {
 		return *this;
 	}
 	
+	
 	Matrix& Matrix::operator+=(const Matrix& matrix) {
 		linearSumInPlace(1.0, 1.0, matrix);
 		
@@ -341,20 +333,21 @@ namespace PH {
 	}
 	
 	
-	// SUBTRACTION
+#pragma mark Subtraction
 	
 	Matrix& Matrix::operator-=(const MathNumber constant) {
 		(*this) += -constant;
 		return *this;
 	}
 	
+	
 	Matrix& Matrix::operator-=(const Matrix& matrix) {
 		linearSumInPlace(1.0, -1.0, matrix);
 		return *this;
 	}
 	
-	
-	// MULTIPLICATION
+
+#pragma mark Multiplication
 	
 	Matrix& Matrix::elementwiseMultiply(const Matrix& other) {
 		// check that array sizes match
@@ -370,6 +363,7 @@ namespace PH {
 		return *this;
 	}
 	
+	
 	Matrix& Matrix::operator*=(const MathNumber constant) {
 		// perform operation
 		mapElements([&constant](MathNumber& element, Index row, Index column) {
@@ -380,7 +374,7 @@ namespace PH {
 	}
 	
 	
-	// DIVISION
+#pragma mark Division
 	
 	Matrix& Matrix::elementwiseDivide(const Matrix& matrix) {
 		// check that array sizes match
@@ -399,6 +393,7 @@ namespace PH {
 		return *this;
 	}
 	
+	
 	Matrix& Matrix::operator/=(const MathNumber constant) {
 		// perform operation
 		mapElements([&constant](MathNumber& element, Index row, Index column) {
@@ -408,6 +403,29 @@ namespace PH {
 		return *this;
 	}
 	
+
+#pragma mark Power
+	
+	// C = C.^p
+	Matrix& Matrix::elementwisePower(const MathNumber constant) {
+		mapElements([&constant](MathNumber& element, Index r, Index c) {
+			element = std::pow(element, constant);
+		});
+		
+		return *this;
+	}
+	
+	
+	Matrix& Matrix::elementwisePower(const Matrix& matrix) {
+		mapElements([&matrix](MathNumber& element, Index r, Index c) {
+			element = std::pow(element, matrix(r,c));
+		});
+		
+		return *this;
+	}
+	
+	
+#pragma mark - Submatrix operations
 	
 	Matrix Matrix::range(Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
 		
@@ -466,38 +484,13 @@ namespace PH {
 	}
 	
 	
-	// constant fill operator
+#pragma mark - Other operations
+	
 	Matrix& Matrix::operator=(const MathNumber constant) {
 		mapElements([&constant](MathNumber& element, Index r, Index c) {
 			element = constant;
 		});
 		return *this;
-	}
-
-	
-	// C = C.^p
-	Matrix& Matrix::elementwisePower(const MathNumber constant) {
-		mapElements([&constant](MathNumber& element, Index r, Index c) {
-			element = std::pow(element, constant);
-		});
-		
-		return *this;
-	}
-	
-	
-	Matrix& Matrix::elementwisePower(const Matrix& matrix) {
-		mapElements([&matrix](MathNumber& element, Index r, Index c) {
-			element = std::pow(element, matrix(r,c));
-		});
-		
-		return *this;
-	}
-	
-	
-	Matrix Matrix::abs() {
-		Matrix result = *this;
-		result.absInPlace();
-		return result;
 	}
 	
 	
@@ -506,6 +499,13 @@ namespace PH {
 			element = std::abs(element);
 		});
 		return *this;
+	}
+	
+	
+	Matrix Matrix::abs() {
+		Matrix result = *this;
+		result.absInPlace();
+		return result;
 	}
 	
 	
@@ -524,7 +524,6 @@ namespace PH {
 	}
 
 	
-	// Cij = Cji
 	Matrix Matrix::transpose() {
 		
 		// new rows = columns
@@ -539,7 +538,7 @@ namespace PH {
 		return result;
 	}
 
-	// computes the inverse of a nonsingular matrix 
+	
 	Matrix Matrix::inverse() const {
 		// check that matrix sizes match
 		if (not this->isSquare()) {
@@ -555,38 +554,7 @@ namespace PH {
 		
 		return X;
 	}
-
-	// submatrix extraction routine (creates a matrix from a portion of an existing Mat)
-	//     is,ie,js,je negative  =>  offset from end of dimension (-1 == end)
-	Matrix Matrix::submatrix(Index beginRow, Index beginColumn, Index endRow, Index endColumn) {
-		
-		// check that requested submatrix exists
-		if (rows() != (endRow-beginRow+1) || columns() != (endColumn-beginColumn+1)) {
-			// the source matrix is not the same size as the submatrix that it is to replace
-			throw new std::invalid_argument("submatrix: size mismatch, source matrix is ("+std::to_string(rows())+", "+std::to_string(columns())+"), but requested submatrix is ("+std::to_string(endRow-beginRow+1)+", "+std::to_string(endColumn-beginColumn+1)+").");
-			
-		} else if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
-			
-			throw new std::invalid_argument("submatrix: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(rows())+", "+std::to_string(columns())+")");
-			
-		} else if (endRow < beginRow || endColumn < beginColumn) {
-			
-			throw new std::invalid_argument("submatrix: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ":" + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ":" + std::to_string(endColumn) + ")");
-		}
-
-		// create new matrix of desired size
-		Matrix C(endRow-beginRow+1, endColumn-beginColumn+1);
-		
-		// copy requested data
-		for (Index column = beginColumn; column <= endColumn; ++column) {
-			for (Index row = beginRow; row <= endRow; row++) {
-				C(row-beginRow,column-beginColumn) = (*this)(row, column);
-			}
-		}
-
-		// return object
-		return C;
-	}
+	
 	
 # pragma mark linear algebra routines
 	
