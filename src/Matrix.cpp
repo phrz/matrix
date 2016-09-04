@@ -85,7 +85,7 @@ namespace PH {
 	}
 	
 	
-#pragma mark Type conversion constructors	
+#pragma mark Type conversion constructors
 	
 	Matrix::Matrix(const Raw2DArray& source) {
 		(*this) = source;
@@ -866,7 +866,7 @@ namespace PH {
 	}
 
 	
-# pragma mark Scalar Output methods
+# pragma mark Scalar output methods
 
 	// minimum entry in the matrix
 	MathNumber Matrix::min() const {
@@ -923,9 +923,9 @@ namespace PH {
 		return mx;
 	}
 	
-	# pragma mark Functional Operators
+# pragma mark Infix operators
 	
-	/// Result = Matrix * Matrix
+	// Result = Matrix * Matrix
 	Matrix operator*(const Matrix& matrix1, const Matrix& matrix2) {
 		
 		// if A has (X rows, Y cols) and B has (Y rows, Z cols),

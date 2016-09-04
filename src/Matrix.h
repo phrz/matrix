@@ -731,46 +731,65 @@ namespace PH {
 		Matrix inverse() const;
 		
 		
-		Matrix submatrix(Index beginRow, Index beginColumn,
-		 Index endRow, Index endColumn);
-		
-		// backward substitution on the linear system U*X = B, returning X as a new Matrix
-		//    U and B remain unchanged in this operation
+		/// backward substitution on the linear system U*X = B, returning X as a new Matrix
+		/// U and B remain unchanged in this operation
 		static Matrix backSubstitution(const Matrix& U, const Matrix& B);
 		
-		// backward substitution on U*x = b, returning x as a new Vector
-		//    U and b remain unchanged in this operation
+		
+		/// backward substitution on U*x = b, returning x as a new Vector
+		/// U and b remain unchanged in this operation
 		static Vector backSubstitution(const Matrix& U, const Vector& b);
 		
-		// forward substitution on the linear system L*X = B, returning X as a new Matrix
-		// L and B remain unchanged in this operation
+		
+		/// forward substitution on the linear system L*X = B, returning X as a new Matrix
+		/// L and B remain unchanged in this operation
 		static Matrix forwardSubstitution(const Matrix& L, const Matrix& B);
 		
-		// forward substitution on L*x = b, returning x as a new vector<double>
-		// L and b remain unchanged in this operation
+		
+		/// forward substitution on L*x = b, returning x as a new vector<double>
+		/// L and b remain unchanged in this operation
 		static Vector forwardSubstitution(const Matrix& L, const Vector& b);
 		
-		// solves a linear system A*X = B, returning X as a new Matrix
-		// A and B are modified in this operation; X holds the result
+		
+		/// solves a linear system A*X = B, returning X as a new Matrix
+		/// A and B are modified in this operation; X holds the result
 		static Matrix linearSolve(Matrix& A, Matrix& B);
 		
-		// solves a linear system A*x = b, filling in the input vector<double> x
-		// A and b are modified in this operation; x holds the result
+		
+		/// solves a linear system A*x = b, filling in the input vector<double> x
+		/// A and b are modified in this operation; x holds the result
 		static Vector linearSolve(Matrix& A, Vector& b);
 		
+		
+		/// Matrix dot product
 		static MathNumber dot(const Matrix& A, const Matrix& B);
 		
-		// Scalar output operators on matrices
+		
+#pragma mark Scalar output methods
+		
+		/// gets minimum value element
 		MathNumber min() const;
+		
+		
+		/// gets maximum value element
 		MathNumber max() const;
 		
+		
+		/// matrix Frobenius norm (column/row vector 2-norm)
 		static MathNumber norm(const Matrix& A);
+		
+		
+		/// matrix infinity norm (column vector infinity norm, row vector one norm)
 		static MathNumber infNorm(const Matrix& A);
+		
+		
+		/// matrix one norm (column vector one norm, row vector infinity norm)
 		static MathNumber oneNorm(const Matrix& A);
+		
 		
 	}; // class Matrix
 	
-	# pragma mark Functional Operators
+# pragma mark Infix operators
 	
 	Matrix operator*(const Matrix& matrix1, const Matrix& matrix2);
 	Vector operator*(const Matrix& matrix, const Vector& vector);

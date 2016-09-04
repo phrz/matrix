@@ -93,6 +93,8 @@ TEST_CASE("fromArray should build a 2D Matrix from a 1D array", "[matrix]") {
 	
 	for(Index r = 0; r < m.rows(); ++r) {
 		for(Index c = 0; c < m.columns(); ++c) {
+			CAPTURE(r);
+			CAPTURE(c);
 			REQUIRE(m(r, c) == 1 + r * m.columns() + c);
 		}
 	}
