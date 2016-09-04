@@ -220,7 +220,19 @@ namespace PH {
 		 * @return a Matrix of size (r,c) filled with the given source data.
 		 */
 		template<Index r, Index c>
-		static Matrix fromArray(Raw1DArray source);
+		static Matrix fromArray(Raw1DArray source) {
+			if (r * c != source.size()) {
+				throw new std::invalid_argument("Matrix::fromArray: the given array could not properly fit into the requested matrix dimensions.");
+			}
+			
+			Matrix result = Matrix(r,c);
+			
+			result.mapElements([&source](MathNumber& element, Index row, Index column) {
+				element = source[row * column + column];
+			});
+			
+			return result;
+		}
 		
 		
 		/**

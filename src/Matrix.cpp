@@ -85,23 +85,7 @@ namespace PH {
 	}
 	
 	
-#pragma mark Type conversion constructors
-	
-	template<Index r, Index c>
-	Matrix Matrix::fromArray(Raw1DArray source) {
-		if (r * c != source.size()) {
-			throw new std::invalid_argument("Matrix::fromArray: the given array could not properly fit into the requested matrix dimensions.");
-		}
-		
-		Matrix result = Matrix(r,c);
-		
-		result.mapElements([&source](MathNumber& element, Index row, Index column) {
-			element = source[row * column + column];
-		});
-		
-		return result;
-	}
-	
+#pragma mark Type conversion constructors	
 	
 	Matrix::Matrix(const Raw2DArray& source) {
 		(*this) = source;
