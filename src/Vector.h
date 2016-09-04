@@ -107,6 +107,7 @@ namespace PH {
 	Vector operator*(const Vector& v, const double c);
 	Vector operator*(const MathNumber c, const Vector& v);
 	Vector operator*(const Vector& v, const Vector& w);
+	Vector operator-(const Vector& v);
 	
 	Vector operator/(const Vector& v, const double c);
 	Vector operator/(const MathNumber c, const Vector& v);

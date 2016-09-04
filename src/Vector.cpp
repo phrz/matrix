@@ -381,6 +381,11 @@ namespace PH {
 		return result;
 	}
 	
+	// Result = Vector * -1
+	Vector operator-(const Vector& v) {
+		return v * -1;
+	}
+	
 	// Result = Vector / Constant
 	Vector operator/(const Vector& vector, const MathNumber constant) {
 		Vector result = vector;
