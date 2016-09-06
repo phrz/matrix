@@ -93,12 +93,24 @@ TEST_CASE("fromArray should build a 2D Matrix from a 1D array", "[matrix]") {
 	
 	for(Index r = 0; r < m.rows(); ++r) {
 		for(Index c = 0; c < m.columns(); ++c) {
+			CAPTURE("\n" + m.str());
+			CAPTURE(m(r, c));
 			CAPTURE(r);
 			CAPTURE(c);
 			REQUIRE(m(r, c) == 1 + r * m.columns() + c);
 		}
 	}
-	
-	// TODO: test that size mismatch (too big, too small) throws
 }
+
+
+TEST_CASE("fromArray should throw when source is wrong size", "[matrix]") {
+	// too small
+	std::vector<double> smallData = {1, 2};
+	REQUIRE_THROWS( (PH::Matrix::fromArray<1, 3>(smallData)) );
+	
+	// too big
+	std::vector<double> bigData = {1, 2, 3, 4};
+	REQUIRE_THROWS( (PH::Matrix::fromArray<1, 3>(bigData)) );
+}
+
 

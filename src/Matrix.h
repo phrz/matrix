@@ -226,9 +226,11 @@ namespace PH {
 			}
 			
 			Matrix result = Matrix(r,c);
+			Index columnCount = result.columns();
 			
-			result.mapElements([&source](MathNumber& element, Index row, Index column) {
-				element = source[row * column + column];
+			result.mapElements([&source, &columnCount]
+			(MathNumber& element, Index row, Index column) {
+				element = source[row * columnCount + column];
 			});
 			
 			return result;
