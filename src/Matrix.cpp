@@ -854,6 +854,7 @@ namespace PH {
 		return x;
 	}
 	
+	
 	// Matrix Dot Product
 	MathNumber dotProduct(const Matrix& A, const Matrix& B) {
 		
@@ -887,6 +888,7 @@ namespace PH {
 		return mn;
 	}
 
+	
 	// maximum entry in the matrix
 	MathNumber Matrix::max() const {
 		MathNumber mx = _data[0][0];
@@ -898,6 +900,7 @@ namespace PH {
 		return mx;
 	}
 	
+	
 	// matrix Frobenius norm (column/row vector 2-norm)
 	MathNumber Matrix::norm(const Matrix& A) {
 		MathNumber sum=0.0;
@@ -906,6 +909,7 @@ namespace PH {
 				sum += A(i,j)*A(i,j);
 		return sqrt(sum);
 	}
+	
 	
 	// matrix infinity norm (column vector infinity norm, row vector one norm)
 	MathNumber Matrix::infNorm(const Matrix& A) {
@@ -919,6 +923,7 @@ namespace PH {
 		return mx;
 	}
 	
+	
 	// matrix one norm (column vector one norm, row vector infinity norm)
 	MathNumber Matrix::oneNorm(const Matrix& A) {
 		MathNumber mx=0.0;
@@ -930,6 +935,7 @@ namespace PH {
 		}
 		return mx;
 	}
+	
 	
 # pragma mark Infix operators
 	
@@ -988,14 +994,10 @@ namespace PH {
 		
 		for (Index column = 0; column < lhs.columns(); column++) {
 			for (Index row = 0; row < lhs.rows(); row++) {
-//				bool isEqual = withinTolerance(lhs(row,column), rhs(row,column));
 				MathNumber left = lhs(row,column);
 				MathNumber right = rhs(row,column);
 				bool isEqual = withinTolerance(left,right);
-				if(not isEqual) {
-					std::cout << std::fixed << left << " != " << std::fixed << right << std::endl;
-					return false;
-				}
+				if(not isEqual) { return false; }
 			}
 		}
 		

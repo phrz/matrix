@@ -7,13 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		27E670E41D787F930090E8F1 /* GramSchmidt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670D91D787F930090E8F1 /* GramSchmidt.cpp */; };
-		27E670E61D787F930090E8F1 /* MatrixTest.old.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670DB1D787F930090E8F1 /* MatrixTest.old.cpp */; };
 		27E670E71D787F930090E8F1 /* Matrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670DC1D787F930090E8F1 /* Matrix.cpp */; };
 		27E670E91D787F930090E8F1 /* Vector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670E21D787F930090E8F1 /* Vector.cpp */; };
 		27E670ED1D787FF60090E8F1 /* MatrixTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670EA1D787F9B0090E8F1 /* MatrixTest.cpp */; };
 		27E670EE1D787FF60090E8F1 /* Matrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670DC1D787F930090E8F1 /* Matrix.cpp */; };
 		27E670EF1D787FF60090E8F1 /* Vector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27E670E21D787F930090E8F1 /* Vector.cpp */; };
+		27F94F5A1D7F235A00E88FEF /* tutorial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 27F94F591D7F234700E88FEF /* tutorial.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -43,8 +42,6 @@
 		275FA9391D723422003B6BE3 /* gtest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = gtest.framework; path = ../../../../Library/Frameworks/gtest.framework; sourceTree = "<group>"; };
 		275FA93B1D723878003B6BE3 /* libgtest.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgtest.a; path = ../../../../usr/local/lib/libgtest.a; sourceTree = "<group>"; };
 		27C6EE441D79CC71002A8B98 /* catch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = catch.h; path = lib/catch.h; sourceTree = "<group>"; };
-		27E670D91D787F930090E8F1 /* GramSchmidt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GramSchmidt.cpp; path = src/GramSchmidt.cpp; sourceTree = "<group>"; };
-		27E670DA1D787F930090E8F1 /* intro.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = intro.cpp; path = src/intro.cpp; sourceTree = "<group>"; };
 		27E670DB1D787F930090E8F1 /* MatrixTest.old.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MatrixTest.old.cpp; path = src/MatrixTest.old.cpp; sourceTree = "<group>"; };
 		27E670DC1D787F930090E8F1 /* Matrix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Matrix.cpp; path = src/Matrix.cpp; sourceTree = "<group>"; };
 		27E670DD1D787F930090E8F1 /* Matrix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Matrix.h; path = src/Matrix.h; sourceTree = "<group>"; };
@@ -55,6 +52,7 @@
 		27E670E31D787F930090E8F1 /* Vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Vector.h; path = src/Vector.h; sourceTree = "<group>"; };
 		27E670EA1D787F9B0090E8F1 /* MatrixTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MatrixTest.cpp; path = test/MatrixTest.cpp; sourceTree = "<group>"; };
 		27E670F01D78811A0090E8F1 /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		27F94F591D7F234700E88FEF /* tutorial.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = tutorial.cpp; path = tutorial/tutorial.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,11 +76,10 @@
 		2741622A1D6F6AE000D78411 = {
 			isa = PBXGroup;
 			children = (
+				27F94F581D7F13AF00E88FEF /* tutorial */,
 				27C6EE431D79CC5F002A8B98 /* lib */,
 				27E670F01D78811A0090E8F1 /* .gitignore */,
 				27E670EC1D787FA60090E8F1 /* test */,
-				27E670D91D787F930090E8F1 /* GramSchmidt.cpp */,
-				27E670DA1D787F930090E8F1 /* intro.cpp */,
 				27E670DB1D787F930090E8F1 /* MatrixTest.old.cpp */,
 				27E670DD1D787F930090E8F1 /* Matrix.h */,
 				27E670DC1D787F930090E8F1 /* Matrix.cpp */,
@@ -128,6 +125,14 @@
 				27E670EA1D787F9B0090E8F1 /* MatrixTest.cpp */,
 			);
 			name = test;
+			sourceTree = "<group>";
+		};
+		27F94F581D7F13AF00E88FEF /* tutorial */ = {
+			isa = PBXGroup;
+			children = (
+				27F94F591D7F234700E88FEF /* tutorial.cpp */,
+			);
+			name = tutorial;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -211,10 +216,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27F94F5A1D7F235A00E88FEF /* tutorial.cpp in Sources */,
 				27E670E71D787F930090E8F1 /* Matrix.cpp in Sources */,
 				27E670E91D787F930090E8F1 /* Vector.cpp in Sources */,
-				27E670E41D787F930090E8F1 /* GramSchmidt.cpp in Sources */,
-				27E670E61D787F930090E8F1 /* MatrixTest.old.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
