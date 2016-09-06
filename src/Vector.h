@@ -12,8 +12,6 @@
 #include "Types.h"
 #include "Serializable.h"
 
-#include <sstream>
-
 namespace PH {
 	
 	class Vector: public Serializable<Vector> {
@@ -33,6 +31,8 @@ namespace PH {
 		Vector(Raw1DArray data);
 		
 		Vector(std::initializer_list<double> l);
+		
+		static Vector random(const Index size);
 		
 		// creates a vector of n linearly spaced values from a through b
 		static Vector linSpace(double a, double b, Index n);

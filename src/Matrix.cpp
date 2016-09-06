@@ -138,11 +138,15 @@ namespace PH {
 	Matrix Matrix::linSpace(MathNumber a, MathNumber b, Index rows, Index columns) {
 		Matrix result(rows, columns);
 		
+		if(b < a) {
+			throw new std::invalid_argument("linSpace: b (upper bound) less than a (lower bound)");
+		}
+		
 		MathNumber range = b - a;
 		MathNumber delta = range / (rows * columns - 1);
 		
 		result.mapElements([&](MathNumber& element, Index r, Index c) {
-			element = a + (r * c + c) * delta;
+			element = a + (r * columns + c) * delta;
 		});
 		
 		return result;
@@ -152,11 +156,15 @@ namespace PH {
 	Matrix Matrix::logSpace(MathNumber a, MathNumber b, Index rows, Index columns) {
 		Matrix result(rows, columns);
 		
+		if(b < a) {
+			throw new std::invalid_argument("linSpace: b (upper bound) less than a (lower bound)");
+		}
+		
 		MathNumber range = b - a;
 		MathNumber delta = range / (rows * columns - 1);
 		
 		result.mapElements([&](MathNumber& element, Index r, Index c) {
-			element = std::pow(10.0, a + (r * c + c) * delta);
+			element = std::pow(10.0, a + (r * columns + c) * delta);
 		});
 		
 		return result;

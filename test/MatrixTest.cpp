@@ -187,3 +187,31 @@ TEST_CASE("random(r,c) should create a matrix of uniform distribution 0...1", "[
 }
 
 
+TEST_CASE("linSpace(a,b,r,c) should create a linear span along a matrix", "[matrix]") {
+	auto l1 = PH::Matrix::linSpace(1, 9, 3, 3);
+	CAPTURE("\n"+l1.str());
+	
+	l1.mapElements([&](MathNumber& element, Index r, Index c) {
+		auto linearIndex = 1 + r * l1.columns() + c;
+		REQUIRE(element == linearIndex);
+	});
+	
+	// upper bound below lower bound
+	REQUIRE_THROWS(PH::Matrix::linSpace(9, 1, 3, 3));
+}
+
+
+TEST_CASE("logSpace(a,b,r,c) should create a logarithmic span along a matrix", "[matrix]") {
+	auto l2 = PH::Matrix::logSpace(1, 9, 3, 3);
+	CAPTURE("\n"+l2.str());
+	
+	l2.mapElements([&](MathNumber& element, Index r, Index c) {
+		auto linearIndex = 1 + r * l2.columns() + c;
+		REQUIRE(element == std::pow(10.0, linearIndex));
+	});
+	
+	// upper bound below lower bound
+	REQUIRE_THROWS(PH::Matrix::logSpace(9, 1, 3, 3));
+}
+
+
