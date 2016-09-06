@@ -100,10 +100,11 @@ TEST_CASE("fromArray should build a 2D Matrix from a 1D array", "[matrix]") {
 			REQUIRE(m(r, c) == 1 + r * m.columns() + c);
 		}
 	}
-}
-
-
-TEST_CASE("fromArray should throw when source is wrong size", "[matrix]") {
+	
+	// empty data
+	std::vector<double> emptyData = {};
+	REQUIRE( (PH::Matrix::fromArray<0,0>(emptyData) == PH::Matrix()) );
+	
 	// too small
 	std::vector<double> smallData = {1, 2};
 	REQUIRE_THROWS( (PH::Matrix::fromArray<1, 3>(smallData)) );
@@ -111,6 +112,78 @@ TEST_CASE("fromArray should throw when source is wrong size", "[matrix]") {
 	// too big
 	std::vector<double> bigData = {1, 2, 3, 4};
 	REQUIRE_THROWS( (PH::Matrix::fromArray<1, 3>(bigData)) );
+}
+
+
+TEST_CASE("Matrix should be constructable by 2D std::vector", "[matrix]") {
+	Raw2DArray goodData = {{1,2,3},{4,5,6},{7,8,9}};
+	Raw2DArray badData = {{1,2,3},{4}};
+	
+	// functional constructor
+	auto m1 = PH::Matrix(goodData);
+	
+	for(Index r = 0; r < m1.rows(); ++r) {
+		for(Index c = 0; c < m1.columns(); ++c) {
+			REQUIRE(m1(r, c) == 1 + r * m1.columns() + c);
+		}
+	}
+	
+	// assignment constructor
+	PH::Matrix m2 = goodData;
+	
+	for(Index r = 0; r < m2.rows(); ++r) {
+		for(Index c = 0; c < m2.columns(); ++c) {
+			REQUIRE(m2(r, c) == 1 + r * m2.columns() + c);
+		}
+	}
+	
+	REQUIRE_THROWS(auto a = PH::Matrix(badData));
+}
+
+
+TEST_CASE("eye(size) should create an identity matrix", "[matrix]") {
+	// size zero
+	REQUIRE(PH::Matrix::eye(0) == PH::Matrix());
+	
+	// some size
+	auto eye = PH::Matrix::eye(10);
+	REQUIRE(eye.isSquare());
+	
+	// test for definition of identity matrix
+	for(Index r = 0; r < eye.rows(); ++r) {
+		for(Index c = 0; c < eye.columns(); ++c) {
+			if(r == c) {
+				REQUIRE(eye(r,c) == 1);
+			} else {
+				REQUIRE(eye(r,c) == 0);
+			}
+		}
+	}
+}
+
+
+TEST_CASE("random(r,c) should create a matrix of uniform distribution 0...1", "[matrix]") {
+	// size zero
+	REQUIRE(PH::Matrix::random(0,0) == PH::Matrix());
+	
+	// some size
+	auto random = PH::Matrix::random(10, 10);
+	
+	// test for not all being same, 0 ≤ x ≤ 1
+	auto allSame = true;
+	auto prevValue = 0.0;
+	random.mapElements([&](MathNumber& element, Index r, Index c) {
+		// make sure not all same
+		if(allSame && r != 0 || c != 0) {
+			if(prevValue != element) allSame = false;
+		}
+		
+		// check range
+		REQUIRE(element >= 0.0);
+		REQUIRE(element <= 1.0);
+	});
+	
+	REQUIRE_FALSE(allSame);
 }
 
 
