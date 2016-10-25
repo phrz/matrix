@@ -32,7 +32,7 @@ namespace PH {
 		Index row = 0;
 		for(auto listRow: l) {
 			if(listRow.size() != listColumnCount) {
-				throw new std::invalid_argument("Matrix initializer list constructor: rows in the initializer list must have identical length.");
+				throw std::invalid_argument("Matrix initializer list constructor: rows in the initializer list must have identical length.");
 			}
 			
 			// iterate columns within row
@@ -98,7 +98,7 @@ namespace PH {
 		
 		for (Index row = 0; row < _rowCount; ++row) {
 			if (source[row].size() != _columnCount) {
-				throw new std::invalid_argument("Matrix Raw2DArray constructor: rows in the 2D array must have identical length. Make sure the array provided is row-major.");
+				throw std::invalid_argument("Matrix Raw2DArray constructor: rows in the 2D array must have identical length. Make sure the array provided is row-major.");
 			}
 			
 			for (Index column = 0; column < _columnCount; ++column) {
@@ -139,7 +139,7 @@ namespace PH {
 		Matrix result(rows, columns);
 		
 		if(b < a) {
-			throw new std::invalid_argument("linSpace: b (upper bound) less than a (lower bound)");
+			throw std::invalid_argument("linSpace: b (upper bound) less than a (lower bound)");
 		}
 		
 		MathNumber range = b - a;
@@ -157,7 +157,7 @@ namespace PH {
 		Matrix result(rows, columns);
 		
 		if(b < a) {
-			throw new std::invalid_argument("linSpace: b (upper bound) less than a (lower bound)");
+			throw std::invalid_argument("linSpace: b (upper bound) less than a (lower bound)");
 		}
 		
 		MathNumber range = b - a;
@@ -205,7 +205,7 @@ namespace PH {
 			}
 			
 			if ((currentColumn != 0) && (currentColumn != newColumnCount)) {
-				throw new std::runtime_error("matrix deserialize: not all rows had same column count.");
+				throw std::runtime_error("matrix deserialize: not all rows had same column count.");
 			}
 			
 			if (currentColumn != 0) {
@@ -291,7 +291,7 @@ namespace PH {
 	Matrix& Matrix::linearSumInPlace(MathNumber matrix1Constant, MathNumber matrix2Constant, const Matrix& matrix2) {
 		// check that array sizes match
 		if (this->dimensions() != matrix2.dimensions()) {
-			throw new std::invalid_argument("matrix-by-matrix linear sum (a*A+b*B): incompatible matrix dimensions (must be same)");
+			throw std::invalid_argument("matrix-by-matrix linear sum (a*A+b*B): incompatible matrix dimensions (must be same)");
 		}
 		
 		mapElements([&matrix1Constant, &matrix2Constant, &matrix2]
@@ -344,7 +344,7 @@ namespace PH {
 	Matrix& Matrix::elementwiseMultiply(const Matrix& other) {
 		// check that array sizes match
 		if (this->dimensions() != other.dimensions()) {
-			throw new std::invalid_argument("elementwise matrix multiplication (A.*B): incompatible matrix dimensions (must be same)");
+			throw std::invalid_argument("elementwise matrix multiplication (A.*B): incompatible matrix dimensions (must be same)");
 		}
 
 		// perform operation
@@ -371,13 +371,13 @@ namespace PH {
 	Matrix& Matrix::elementwiseDivide(const Matrix& matrix) {
 		// check that array sizes match
 		if (this->dimensions() != matrix.dimensions()) {
-			throw new std::invalid_argument("elementwise matrix division (A./B): incompatible matrix dimensions (must be same)");
+			throw std::invalid_argument("elementwise matrix division (A./B): incompatible matrix dimensions (must be same)");
 		}
 		
 		mapElements([&matrix](MathNumber& element, Index row, Index column) {
 			MathNumber otherElement = matrix(row,column);
 			if (otherElement == 0.0) {
-				throw new std::runtime_error("elementwise matrix division (A./B): division by zero");
+				throw std::runtime_error("elementwise matrix division (A./B): division by zero");
 			}
 			element /= otherElement;
 		});
@@ -426,15 +426,15 @@ namespace PH {
 		
 		if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
 			
-			throw new std::invalid_argument("range: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(rows())+", "+std::to_string(columns())+")");
+			throw std::invalid_argument("range: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(rows())+", "+std::to_string(columns())+")");
 			
 		} else if (endRow < beginRow || endColumn < beginColumn) {
 			
-			throw new std::invalid_argument("range: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ")");
+			throw std::invalid_argument("range: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ")");
 			
 		} else if (newRows == 0 || newColumns == 0) {
 			
-			throw new std::invalid_argument("range: cannot build a submatrix with a zero-size dimension.");
+			throw std::invalid_argument("range: cannot build a submatrix with a zero-size dimension.");
 			
 		}
 		
@@ -456,15 +456,15 @@ namespace PH {
 		
 		if (source.rows() != (endRow-beginRow+1) || source.columns() != (endColumn-beginColumn+1)) {
 			// the source matrix is not the same size as the submatrix that it is to replace
-			throw new std::invalid_argument("insert: size mismatch, supplied matrix is ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+"), but requested submatrix is ("+std::to_string(endRow-beginRow+1)+", "+std::to_string(endColumn-beginColumn+1)+").");
+			throw std::invalid_argument("insert: size mismatch, supplied matrix is ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+"), but requested submatrix is ("+std::to_string(endRow-beginRow+1)+", "+std::to_string(endColumn-beginColumn+1)+").");
 			
 		} else if (beginRow >= rows() || endRow >= rows() || beginColumn >= columns() || endColumn >= columns()) {
 			
-			throw new std::invalid_argument("insert: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+")");
+			throw std::invalid_argument("insert: requested submatrix does not exist: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ") on a matrix of size ("+std::to_string(source.rows())+", "+std::to_string(source.columns())+")");
 			
 		} else if (endRow < beginRow || endColumn < beginColumn) {
 			
-			throw new std::invalid_argument("insert: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ")");
+			throw std::invalid_argument("insert: requested submatrix does not exist, upper index is below lower index: Begin(" + std::to_string(beginRow) + ", " + std::to_string(beginColumn) + "), End(" + std::to_string(endRow) + ", " + std::to_string(endColumn) + ")");
 		}
 
 		// perform operation
@@ -503,7 +503,7 @@ namespace PH {
 	
 	Matrix& Matrix::transposeInPlace() {
 		if(not this->isSquare()) {
-			throw new std::logic_error("Cannot transpose a non-square matrix in place");
+			throw std::logic_error("Cannot transpose a non-square matrix in place");
 		}
 		
 		for (Index row = 0; row < rows(); ++row) {
@@ -534,7 +534,7 @@ namespace PH {
 	Matrix Matrix::inverse() const {
 		// check that matrix sizes match
 		if (not this->isSquare()) {
-			throw new std::logic_error("Cannot invert a non-square matrix.");
+			throw std::logic_error("Cannot invert a non-square matrix.");
 		}
 
 		// create two temporary matrices for operation
@@ -555,7 +555,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (A.rows() != B.rows() or not A.isSquare()) {
-			throw new std::invalid_argument("linearSolve: size mismatch between matrices.");
+			throw std::invalid_argument("linearSolve: size mismatch between matrices.");
 		}
 		
 		// create temporary variables
@@ -589,7 +589,7 @@ namespace PH {
 			
 			// check for nonzero matrix diagonal
 			if (std::abs(A._data[k][k]) < STOL*Amax) {
-				throw new std::runtime_error("linearSolve: numerically singular matrix.");
+				throw std::runtime_error("linearSolve: numerically singular matrix.");
 			}
 			
 			// perform elimination using row k
@@ -614,7 +614,7 @@ namespace PH {
 		
 		// check for singularity at end (only need to check final diagonal entry)
 		if (std::abs(A._data[A.rows()-1][A.rows()-1]) < STOL*Amax) {
-			throw new std::runtime_error("linearSolve: numerically singular matrix.");
+			throw std::runtime_error("linearSolve: numerically singular matrix.");
 		}
 		
 		// perform Backward Substitution on result
@@ -628,7 +628,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (A.rows() != b.size() or not A.isSquare()) {
-			throw new std::invalid_argument("linearSolve: size mismatch between matrix and vector.");
+			throw std::invalid_argument("linearSolve: size mismatch between matrix and vector.");
 		}
 		
 		// create temporary variables
@@ -662,7 +662,7 @@ namespace PH {
 			
 			// check for nonzero matrix diagonal
 			if (std::abs(A._data[k][k]) < STOL * Amax) {
-				throw new std::runtime_error("linearSolve: numerically singular matrix.");
+				throw std::runtime_error("linearSolve: numerically singular matrix.");
 			}
 			
 			// perform elimination using row k
@@ -687,7 +687,7 @@ namespace PH {
 		// check for singularity at end (only need to check final
 		// diagonal entry)
 		if (std::abs(A._data[A.rows() - 1][A.rows() - 1]) < STOL * Amax) {
-			throw new std::runtime_error("linearSolve: numerically singular matrix.");
+			throw std::runtime_error("linearSolve: numerically singular matrix.");
 		}
 		
 		// perform Backward Substitution on result
@@ -704,7 +704,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (U.rows() != B.rows() || not U.isSquare()) {
-			throw new std::invalid_argument("backSubstitution: size mismatch between matrix and vector.");
+			throw std::invalid_argument("backSubstitution: size mismatch between matrix and vector.");
 		}
 		
 		// copy B into X
@@ -717,7 +717,7 @@ namespace PH {
 		for (Index j = U.rows() - 1; j-- > 0;) {
 			// check for nonzero matrix diagonal
 			if (std::abs(U._data[j][j]) < STOL*Umax) {
-				throw new std::runtime_error("backSubstitution: numerically singular matrix.");
+				throw std::runtime_error("backSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -744,7 +744,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (U.rows() != b.size() || U.rows() != U.columns()) {
-			throw new std::invalid_argument("backSubstitution: size mismatch between matrix and vector.");
+			throw std::invalid_argument("backSubstitution: size mismatch between matrix and vector.");
 		}
 		
 		// copy b into x
@@ -757,7 +757,7 @@ namespace PH {
 		for (long int j=U.rows()-1; j>=0; j--) {
 			// check for nonzero matrix diagonal
 			if (std::abs(U._data[j][j]) < STOL * Umax) {
-				throw new std::runtime_error("backSubstitution: numerically singular matrix.");
+				throw std::runtime_error("backSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -783,7 +783,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (L.rows() != B.rows() or not L.isSquare()) {
-			throw new std::invalid_argument("forwardSubstitution: size mismatch between matrix and vector.");
+			throw std::invalid_argument("forwardSubstitution: size mismatch between matrix and vector.");
 		}
 		
 		// copy B into X
@@ -796,7 +796,7 @@ namespace PH {
 		for (long int j=0; j<L.rows(); j++) {
 			// check for nonzero matrix diagonal
 			if (std::abs(L._data[j][j]) < STOL*Lmax) {
-				throw new std::runtime_error("backSubstitution: numerically singular matrix.");
+				throw std::runtime_error("backSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -825,7 +825,7 @@ namespace PH {
 		
 		// check that matrix sizes match
 		if (L.rows() != b.size() || not L.isSquare()) {
-			throw new std::invalid_argument("forwardSubstitution: size mismatch between matrix and vector.");
+			throw std::invalid_argument("forwardSubstitution: size mismatch between matrix and vector.");
 		}
 		
 		x = b;
@@ -838,7 +838,7 @@ namespace PH {
 			
 			// check for nonzero matrix diagonal
 			if (std::abs(L._data[j][j]) < STOL*Lmax) {
-				throw new std::runtime_error("forwardSubstitution: numerically singular matrix.");
+				throw std::runtime_error("forwardSubstitution: numerically singular matrix.");
 			}
 			
 			// solve for this row of solution
@@ -859,7 +859,7 @@ namespace PH {
 	MathNumber dotProduct(const Matrix& A, const Matrix& B) {
 		
 		if (A.dimensions() != B.dimensions()) {
-			throw new std::invalid_argument("dot product: incompatible matrix dimensions (must be same)");
+			throw std::invalid_argument("dot product: incompatible matrix dimensions (must be same)");
 		}
 		
 		MathNumber sum = 0.0;
@@ -947,7 +947,7 @@ namespace PH {
 		// (X rows, Z cols)
 		
 		if (matrix1.columns() != matrix2.rows()) {
-			throw new std::invalid_argument("matrix-by-matrix multiplication: incompatible matrix dimensions (inner dimensions must be same, A*B requires A's columns to be the same as B's rows)");
+			throw std::invalid_argument("matrix-by-matrix multiplication: incompatible matrix dimensions (inner dimensions must be same, A*B requires A's columns to be the same as B's rows)");
 		}
 		
 		// perform operation
@@ -971,7 +971,7 @@ namespace PH {
 		Vector result(matrix.rows());
 		
 		if (matrix.columns() != vector.size()) {
-			throw new std::invalid_argument("matrix-vector product: incompatible matrix/vector sizes in A*v");
+			throw std::invalid_argument("matrix-vector product: incompatible matrix/vector sizes in A*v");
 		}
 		
 		for(Index column = 0; column < matrix.columns(); ++column) {

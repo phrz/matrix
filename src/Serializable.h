@@ -30,7 +30,7 @@ namespace PH {
 			file.open(path);
 			
 			if(not file.is_open()) {
-				throw new std::runtime_error("Could not open file (" + path + ") to save to.");
+				throw std::runtime_error("Could not open file (" + path + ") to save to.");
 			}
 			
 			serialize(file);
@@ -42,7 +42,7 @@ namespace PH {
 			file.open(path);
 			
 			if(not file.is_open()) {
-				throw new std::runtime_error("Could not open file (" + path + ") to load from.");
+				throw std::runtime_error("Could not open file (" + path + ") to load from.");
 			}
 			
 			return this->deserialize(file);

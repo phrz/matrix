@@ -51,7 +51,7 @@ namespace PH {
 	// create a new vector of linearly spaced data
 	Vector Vector::linSpace(MathNumber a, MathNumber b, Index n) {
 		if (n<2) {
-			throw new std::invalid_argument("linSpace expects a vector size argument > 1.");
+			throw std::invalid_argument("linSpace expects a vector size argument > 1.");
 		}
 		
 		Vector v(n);
@@ -68,7 +68,7 @@ namespace PH {
 	// create a new vector of logarithmically spaced data
 	Vector Vector::logSpace(MathNumber a, MathNumber b, Index n) {
 		if (n<2) {
-			throw new std::invalid_argument("logSpace expects a vector size argument > 1.");
+			throw std::invalid_argument("logSpace expects a vector size argument > 1.");
 		}
 		
 		Vector v(n);
@@ -111,15 +111,15 @@ namespace PH {
 		
 		if (this->size() < (end - begin + 1)) {
 			// Checking that source vector matches provided subvector range
-			throw new std::invalid_argument("insert: size mismatch, this vector has " + std::to_string(this->size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
+			throw std::invalid_argument("insert: size mismatch, this vector has " + std::to_string(this->size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
 		} else if (end >= this->size()) {
 			// Checking that range indices are legal
 			// (counting numbers, with end in bounds)
-			throw new std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
+			throw std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
 		} else if (end < begin) {
 			// Checking that lower index is below upper index
 			// (no backwards ranges)
-			throw new std::invalid_argument("insert: requested subvector does not exist, upper index is below lower index: (" + std::to_string(begin) + ":" + std::to_string(end) + ")");
+			throw std::invalid_argument("insert: requested subvector does not exist, upper index is below lower index: (" + std::to_string(begin) + ":" + std::to_string(end) + ")");
 		}
 		
 		// create new vector of desired size
@@ -140,15 +140,15 @@ namespace PH {
 		
 		if (source.size() != (end - begin + 1)) {
 			// Checking that source vector matches provided subvector range
-			throw new std::invalid_argument("insert: size mismatch, supplied vector has " + std::to_string(source.size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
+			throw std::invalid_argument("insert: size mismatch, supplied vector has " + std::to_string(source.size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
 		} else if (end >= this->size()) {
 			// Checking that range indices are legal
 			// (counting numbers, with end in bounds)
-			throw new std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
+			throw std::invalid_argument("insert: requested subvector does not exist: (" + std::to_string(begin) + ":" + std::to_string(end) + ") on a vector with " + std::to_string(this->size()) + " elements.");
 		} else if (end < begin) {
 			// Checking that lower index is below upper index
 			// (no backwards ranges)
-			throw new std::invalid_argument("insert: requested subvector does not exist, upper index is below lower index: (" + std::to_string(begin) + ":" + std::to_string(end) + ")");
+			throw std::invalid_argument("insert: requested subvector does not exist, upper index is below lower index: (" + std::to_string(begin) + ":" + std::to_string(end) + ")");
 		}
 		
 		// perform operation
@@ -175,7 +175,7 @@ namespace PH {
 	/// In-place, elementwise (vector-by-vector) addition
 	Vector& Vector::operator+=(const Vector& addends) {
 		if (this->size() != addends.size()) {
-			throw new std::invalid_argument("vector-by-vector addition: incompatible vector sizes.");
+			throw std::invalid_argument("vector-by-vector addition: incompatible vector sizes.");
 		}
 		
 		this->mapElements([&addends](MathNumber& element, Index i) {
@@ -199,7 +199,7 @@ namespace PH {
 	/// In-place, elementwise (vector-by-vector) subtraction
 	Vector& Vector::operator-=(const Vector& subtrahends) {
 		if (this->size() != subtrahends.size()) {
-			throw new std::invalid_argument("vector-by-vector subtraction: incompatible vector sizes.");
+			throw std::invalid_argument("vector-by-vector subtraction: incompatible vector sizes.");
 		}
 		
 		this->mapElements([&subtrahends](MathNumber& element, Index i) {
@@ -223,7 +223,7 @@ namespace PH {
 	/// In-place, elementwise (vector-by-vector) multiplication
 	Vector& Vector::operator*=(const Vector& multipliers) {
 		if (this->size() != multipliers.size()) {
-			throw new std::invalid_argument("vector-by-vector multiplication: incompatible vector sizes.");
+			throw std::invalid_argument("vector-by-vector multiplication: incompatible vector sizes.");
 		}
 
 		this->mapElements([&multipliers](MathNumber& element, Index i) {
@@ -247,7 +247,7 @@ namespace PH {
 	/// In-place, elementwise (vector-by-vector) division
 	Vector& Vector::operator/=(const Vector& divisors) {
 		if (this->size() != divisors.size()) {
-			throw new std::invalid_argument("vector-by-vector division: incompatible vector sizes.");
+			throw std::invalid_argument("vector-by-vector division: incompatible vector sizes.");
 		}
 		
 		this->mapElements([&divisors](MathNumber& element, Index i) {
@@ -271,7 +271,7 @@ namespace PH {
 	/// In-place, elementwise (vector-by-vector) exponentiation
 	Vector& Vector::operator^=(const Vector& exponents) {
 		if (this->size() != exponents.size()) {
-			throw new std::invalid_argument("vector-by-vector exponentiation: incompatible vector sizes.");
+			throw std::invalid_argument("vector-by-vector exponentiation: incompatible vector sizes.");
 		}
 		
 		this->mapElements([&exponents](MathNumber& element, Index i){
@@ -285,7 +285,7 @@ namespace PH {
 	// inner product between two vectors
 	MathNumber Vector::dot(const Vector& v1, const Vector& v2) {
 		if (v1.size() != v2.size()) {
-			throw new std::invalid_argument("dot product: incompatible vector sizes (must be same)");
+			throw std::invalid_argument("dot product: incompatible vector sizes (must be same)");
 		}
 		
 		MathNumber result = 0.0;

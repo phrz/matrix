@@ -212,7 +212,7 @@ namespace PH {
 		template<Index r, Index c>
 		static Matrix fromArray(Raw1DArray source) {
 			if (r * c != source.size()) {
-				throw new std::invalid_argument("Matrix::fromArray: the given array could not properly fit into the requested matrix dimensions.");
+				throw std::invalid_argument("Matrix::fromArray: the given array could not properly fit into the requested matrix dimensions.");
 			}
 			
 			Matrix result = Matrix(r,c);
@@ -500,7 +500,7 @@ namespace PH {
 		/// ambiguous syntax (confused with linear index accessor)
 		Raw1DArray& operator[](Index i) {
 			// Removed
-			throw new NotImplementedException();
+			throw NotImplementedException();
 		}
 		
 		
