@@ -109,7 +109,7 @@ namespace PH {
 	// extract routine for portions of vectors, output = this(begin:end)
 	Vector Vector::range(Index begin, Index end) {
 		
-		if (this->size() != (end - begin + 1)) {
+		if (this->size() < (end - begin + 1)) {
 			// Checking that source vector matches provided subvector range
 			throw new std::invalid_argument("insert: size mismatch, this vector has " + std::to_string(this->size()) + " entries, but requested subvector has " + std::to_string(end - begin + 1) + " entries.");
 		} else if (end >= this->size()) {
