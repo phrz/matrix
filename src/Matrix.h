@@ -51,7 +51,7 @@ namespace PH {
 			return !(*this==rhs);
 		}
 	};
-
+	
 	
 	/**
 	 * @class Matrix
@@ -100,7 +100,7 @@ namespace PH {
 		 * @param c the number of columns
 		 */
 		Matrix(Index r, Index c);
-
+		
 		
 #pragma mark Initializer list constructors
 		
@@ -112,7 +112,7 @@ namespace PH {
 		 *
 		 * @param l a nested (2D) initializer list of numbers, row-major.
 		 *
-		 * @throws std::invalid_argument rows in the initializer list 
+		 * @throws std::invalid_argument rows in the initializer list
 		 * must have identical length.
 		 *
 		 * @see Matrix::operator=(std::initializer_list<std::initializer_list<double>> l)
@@ -155,7 +155,7 @@ namespace PH {
 		 * sets the matrix size to the source matrix's size and copies its
 		 * data structure over.
 		 *
-		 * @param source another matrix from which to nondestructively 
+		 * @param source another matrix from which to nondestructively
 		 * copy data.
 		 *
 		 * @return a reference to the newly copied matrix (`*this`)
@@ -219,9 +219,9 @@ namespace PH {
 			Index columnCount = result.columns();
 			
 			result.mapElements([&source, &columnCount]
-			(MathNumber& element, Index row, Index column) {
-				element = source[row * columnCount + column];
-			});
+							   (MathNumber& element, Index row, Index column) {
+								   element = source[row * columnCount + column];
+							   });
 			
 			return result;
 		}
@@ -378,7 +378,7 @@ namespace PH {
 		 * @see Matrix::str
 		 */
 		Matrix deserialize(std::istream& input);
-
+		
 		
 #pragma mark - Iterators
 		
@@ -397,6 +397,18 @@ namespace PH {
 			}
 		}
 		
+		/**
+		 * @brief an immutable version of mapColumns.
+		 *
+		 * @see Matrix::mapColumns
+		 */
+		void forEachColumn(std::function<void(const Raw1DArray&,Index)> callback) const {
+			for(auto it = _data.begin(); it != _data.end(); ++it) {
+				Index i = it - _data.begin();
+				callback(*it, i);
+			}
+		}
+		
 		
 		/**
 		 * @brief iterates over all elements with a lambda function.
@@ -408,6 +420,20 @@ namespace PH {
 		 */
 		void mapElements(std::function<void(MathNumber&,Index,Index)> callback) {
 			mapColumns([&callback](Raw1DArray& columnArray, Index c){
+				for(auto it = columnArray.begin(); it != columnArray.end(); ++it) {
+					Index r = it - columnArray.begin();
+					callback(*it, r, c);
+				}
+			});
+		}
+		
+		/**
+		 * @brief an immutable version of mapElements.
+		 *
+		 * @see Matrix::mapElements
+		 */
+		void forEach(std::function<void(const MathNumber&,Index,Index)> callback) const {
+			forEachColumn([&callback](const Raw1DArray& columnArray, Index c){
 				for(auto it = columnArray.begin(); it != columnArray.end(); ++it) {
 					Index r = it - columnArray.begin();
 					callback(*it, r, c);
@@ -477,7 +503,7 @@ namespace PH {
 			return Dimensions(_rowCount, _columnCount);
 		}
 		
-
+		
 #pragma mark - Data accessors
 		
 		/**
@@ -543,7 +569,7 @@ namespace PH {
 		 *
 		 * @param precision the precision to which to display the numbers.
 		 * in `operator<<`, this defaults to `displayPrecision`. Elsewhere,
-		 * most importantly in serialization to file, this defaults to 
+		 * most importantly in serialization to file, this defaults to
 		 * `fullPrecision`.
 		 *
 		 * @return a string representation of the matrix.
@@ -620,7 +646,7 @@ namespace PH {
 		
 		/// in-place quotient of this matrix and a constant.
 		Matrix& operator/=(const MathNumber constant);
-
+		
 		
 #pragma mark Power
 		
@@ -691,7 +717,7 @@ namespace PH {
 		 *
 		 */
 		void insert(const Matrix& source, Index beginRow, Index beginColumn, Index endRow, Index endColumn);
-
+		
 		
 #pragma mark - Other operations
 		
@@ -793,7 +819,7 @@ namespace PH {
 	Matrix operator-(const Matrix& matrix1, const Matrix& matrix2);
 	
 	bool withinTolerance(const MathNumber a, const MathNumber b, const double precision = 1e-4);
-
+	
 } // namespace PH
 
 #endif // Matrix_h
