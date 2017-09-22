@@ -119,7 +119,58 @@ myMatrix.loadFrom("../data/myMatrix.txt");
 ### Iterating matrices
 Instead of writing cumbersome `for` loops and (even worse) nested `for` loops, the Matrix class provides several useful iterators.
 ```cpp
-TODO
+Matrix myMatrix = {{1,2,3},
+                   {4,5,6},
+				   {7,8,9}}
+```
+#### Iterating columns
+There are two ways to iterate columns: one gives you access to the column through a `Raw1DArray` reference (`std::vector<double>`), and the other is immutable (`const`). Both run synchronously, and provide the column number as an parameter in the callback.
+```cpp
+// Iterate columns while editing them.
+// This example sets every diagonal to 1.
+myMatrix.mapColumns([&](Raw1DArray& column, Index index) {
+	column[index] = 1;
+});
+``
+``
+#include <functional>
+// Iterate columns without editing them.
+// This example sums each column.
+auto sums = Raw1DArray(3);
+myMatrix.forEachColumn([&](const Raw1DArray& column, Index index) {
+	// if you put 0 instead of 0.0, the answer will be an int.
+	sums[index] = std::accumulate(column.begin(), column.end(), 0.0);
+});
+```
+You will get a strange error if you get the types wrong in the above lambdas: note the addition of `const` in `forEachColumn`. 
+
+**NOTE:** It's a pain to provide the types for the lambdas above. You can use `auto` instead, as long as you understand what types they are supposed to be:
+```cpp
+myMatrix.forEachColumn([&](auto column, auto index) {
+	// column is a constant reference to an array
+	// index is an unsigned integer
+	sums[index] = std::accumulate(column.begin(), column.end(), 0.0);
+});
+```
+
+#### Iterating elements
+Iterating each element of the matrix is also easy, and comes in a mutable and immutable version.
+```cpp
+myMatrix.mapElements([&](auto element, Index row, Index column) {
+	// set the cell to the sum of the row number and column number.
+	// (why would you do this?)
+	element = row + column;
+});
+
+// We call it "value" here because it's not a mutable reference,
+// just an immutable reference we can retrieve and use.
+
+// Here, we take an elementwise sum of the whole matrix.
+// This is not the most creative or impressive use of this function.
+auto sum = 0.0;
+myMatrix.forEach([&](auto value, Index row, Index column) {
+	sum += value;
+});
 ```
 
 ## Adding to your project
