@@ -1,9 +1,128 @@
 # Matrix
 by Paul Herz
 
-I developed this library off of Dr. Daniel Reynold's implementation. It has been approved as a drop-in replacement for that library in the course of the High Performance Scientific Computing class.
+I developed this library off of Dr. Reynolds' implementation. It has been approved as a drop-in replacement for that library in the course of the High Performance Scientific Computing class.
 
 ## Use
+This project includes two classes, `PH::Matrix` and `PH::Vector`. The Matrix class represents a two-dimensional, `m,n` matrix of `doubles`. The Vector class is only for one-dimensional vectors of `doubles`. The reason this library has a separate Vector class while the original doesn't is to avoid accidentally providing a 2D matrix in places where only a vector suffices.
+
+The `PH` namespace avoids colliding with anyone else's matrix code (including Reynolds'). You can reference these classes one of two ways:
+```cpp
+// the long way
+#include "Matrix.h"
+int main() {
+	auto myMatrix = PH::Matrix();
+}
+
+// the short way
+#include "Matrix.h"
+using namespace PH;
+int main() {
+	auto myMatrix = Matrix();
+}
+```
+
+The rest of this document will assume you're doing it the "quick" way, with the `using` statement.
+
+### Type aliases
+You will probably not see `doubles` mentioned directly in the code for values, or `size_t` values mentioned directly for dimensions/indexing. These types are aliased to `PH::MathNumber` and `PH::Index`, respectively. This is so they can be tweaked in one place rather than going through to edit them in 200 places.
+
+### Creating basic matrices
+You can create a Matrix one of many ways:
+
+- A (0,0) matrix (presumably to be resized later) with `Matrix();`.
+- A zero-filled (r,c) matrix: `Matrix(Index r, Index c);` (see Type aliases, above).
+- With a C++ initializer list: `Matrix({{1,2,3},{4,5,6},{7,8,9}});` (for you MATLAB folks. Fails if misshapen).
+- Again with an initializer list: `Matrix myMatrix = {{1,2,3},{4,5,6},{7,8,9}};`.
+
+### Copying and moving matrices:
+the Matrix class has copy and move constructors, using the following syntaxes:
+```cpp
+auto myMatrix = otherMatrix;
+auto myMatrix = Matrix(otherMatrix);
+```
+This will move the matrix if possible, otherwise it will perform a deep copy.
+
+### Converting `std::vector` into a Matrix:
+#### A one dimensional `std::vector<double>`
+If you have a one dimensional `std::vector`, you can make it into a Matrix with the following code. You can use the `Raw1DArray` type alias to guarantee compatibility with this library even if the numeral type changes from `double`.
+```cpp
+std::vector<double> myArray = {1,2,3,4,5,6,7,8,9};
+auto myMatrix = Matrix::fromArray<3,3>(myArray);
+```
+This will attempt to create a 3 row, 3 column Matrix and fill in the values from the array in reading order (left-to-right, top-to-bottom). It will throw an exception if the size of the array does not match the numbers in the `fromArray<r,c>` template. Because of the ambiguity as to the size of the desired matrix, there is not a direct-assignment alias for this method (you can't just say `Matrix myMatrix = myArray` when `myArray` is an `std::vector<double>`).
+
+#### A two dimensional `std::vector< std::vector<double> >`
+If you have a 2D `std::vector`, it is even easier because the dimensional data is already provided. I recommend using the `Raw2DArray` type alias I provide to avoid typing too much.
+```cpp
+Raw2DArray my2DArray = {{1,2,3},{4,5,6},{7,8,9}};
+
+// Method 1
+Matrix myMatrix = my2DArray;
+// Method 2
+auto myMatrix = Matrix(my2DArray);
+```
+Notice that even though the `std::vector` is constructed with an initializer list, the `Matrix(Raw2DArray)` constructor is not the same as the above initializer list constructor, which lets you provide literal values directly. These methods will fail if the raw array is not consistenly shaped.
+
+### Convenience initializers
+The **identity matrix** is a square (n,n), zeroed-out array with ones in the diagonals. It has been called `eye` here to accomodate the refugees from MATLAB.
+```cpp
+auto myMatrix = Matrix::eye(4);
+std::cout << myMatrix;
+```
+```
+    1    0    0    0
+    0    1    0    0
+    0    0    1    0
+    0    0    0    1
+```
+
+This library can generate a **random matrix** with values following a uniform distribution from 0.0...1.0. This is much more powerful than the random generator in MATLAB, which is pseudorandom, but not guaranteed to follow a uniform distribution.
+```cpp
+auto myMatrix = Matrix::random(3,5);
+std::cout << myMatrix;
+```
+```
+    0.0102902    0.261425    0.508335    0.262773    0.53815
+    0.494359    0.270736    0.591562    0.222625    0.680818
+    0.624379    0.198428    0.5823    0.0862867    0.297198
+```
+
+A **linear span** from values `a` to `b` can be generated. It will first generate a linear span across `r` times `c` values (number of cells in the matrix) and will proceed to fill the matrix in reading order, left-to-right, top-to-bottom. The syntax for a **logarithmic span** is identical, just with the `logSpace` function.
+```cpp
+auto myMatrix = Matrix::linSpace(0,0.8,3,3);
+std::cout << myMatrix;
+```
+```
+    0    0.1    0.2
+    0.3    0.4    0.5
+    0.6    0.7    0.8
+```
+
+### Serializing and deserializing (saving to and loading from a file)
+This is extremely easy in this library. To save to a format compatible with Numpy etc. (space-delimited columns, newline-delimited rows), use the `saveTo` method:
+```cpp
+// relative path
+myMatrix.saveTo("../data/myMatrix.txt");
+
+// absolute path
+myMatrix.saveTo("/Users/paul/Desktop/myMatrix.txt");
+```
+This will throw a runtime error saying `Could not open file (/bad/path/to/file) to save to.` if you are providing a folder that does not exist or a path to which the program does not have access.
+
+Loading is just as easy, assuming the same format.
+```cpp
+Matrix myMatrix;
+myMatrix.loadFrom("../data/myMatrix.txt");
+```
+
+### Iterating matrices
+Instead of writing cumbersome `for` loops and (even worse) nested `for` loops, the Matrix class provides several useful iterators.
+```cpp
+TODO
+```
+
+## Adding to your project
 To use the included `Matrix` and `Vector` classes in your project, simply drop the contents of the `src` folder here into your project. You may want to separate this code into a `lib` folder to denote that it is not your project code if using it in HPSC.
 
 ### Including into a traditional project (GCC, Makefiles)
