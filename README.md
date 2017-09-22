@@ -173,6 +173,86 @@ myMatrix.forEach([&](auto value, Index row, Index column) {
 });
 ```
 
+#### Resizing arrays (bigger or smaller)
+Use `.resize(r,c)` to resize your array to size `(r,c)`. This will destroy elements if shrinking and create new cells if expanding. Value initialization depends on the behavior of `std::vector::resize` for the underlying data structures of the Matrix and may or may not be zero in newly created cells.
+
+#### Matrix dimensions
+- Use `.isSquare()` to retrieve a boolean value representing if the matrix is square (rows = columns).
+- `.size()` returns the number of cells (rows * columns).
+- `.rows()` and `.columns()` returns the number of rows and columns, respectively.
+- `.dimensions()` returns a `PH::Dimensions` struct, useful for comparing for equality with the same struct from another matrix. This feature is used internally.
+
+#### Copying rows and columns
+Use `.copyRow(i)` and `.copyColumn(i)` to copy the i-th row and i-th column respectively, returning a `PH::Raw1DArray` (alias for `std::vector<double>`).
+
+#### Accessing elements in a Matrix
+Unlike the library on which this one is based, we do not use the subscript (`[]`) operator. In the original library, the subscript operator exposed the underlying data structure, which was column-ordered. Whereas users would expect to access the element at row `r` and column `c` with `matrix[r][c]`, it would be the reverse. As such, the subscript operator has not merely been **changed**, as this would cause migrated code to behave unexpectedly — it has been removed and will return a `PH::NotImplementedException` when used.
+
+This library provides exactly two accessors, not including automatic immutable versions for `const Matrix`:
+```cpp
+// get the element at row r and column c
+myMatrix(r,c);
+
+// get the element at linear index i (reading order)
+myMatrix(i);
+```
+
+#### String representation
+To return a string representation of the Matrix, use `.str(int precision)`. If no argument is provided, default (full) precision is displayed. This returns an `std::string`, and **not** a `char*` ("C String").
+
+To print a string representation directly, just use `std::cout << myMatrix`. This method uses the above `.str` method with precision `PH::Matrix.displayPrecision`.
+
+#### Matrix arithmetic
+Most arithmetic operations are divided into two categories: mutating (in-place) and non-mutating. Mutating methods will act upon the first matrix in the operation, whereas non-mutating methods will return a new matrix as a result of the operation. Where the difference is not made clear with just non-Latin operators (`+`,`-`,`/`,`*`, etc.), an explicit English name is used to avoid ambiguity.
+
+Below, type names will be used where you would expect variable names for concision and clarity. All elementwise operations involving two matrices require them to be the *same size*. All mutating operations return a reference to the matrix being mutated (allowing for operation chaining), and all non-mutating operations return a new matrix (or a Vector or scalar, depending on the operation).
+
+| Operation | Mutating | Syntax | Description |
+|--------------------------------|----------|----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `x*A+y*B` | Yes | `Matrix.linearSumInPlace (MathNumber,MathNumber,Matrix)` | First, multiplies each element of this matrix by the first number. Then adds each element of the second matrix to the corresponding element in this matrix, scaled by the second number. |
+| **Elementwise Addition** | Yes | `Matrix += MathNumber` | Adds the number to each element of this matrix. |
+| **Elementwise Sum** | Yes | `Matrix += Matrix` | Adds each element of the right matrix to each corresponding element of the left matrix. Only the left matrix is mutated. |
+| **Elementwise Subtraction** | Yes | `Matrix -= MathNumber` | Subtracts the number from each element of this matrix. |
+| | No | `Matrix - MathNumber` or `MathNumber - Matrix` | Returns a new matrix where each element has had the number subtracted, or where each element has been subtracted from the number (order-dependent). |
+| **Elementwise Difference** | Yes | `Matrix -= Matrix` | Subtracts each element of the right matrix from each corresponding element of the left matrix. Only the left matrix is mutated. |
+| | No | `Matrix - Matrix` | Returns a new matrix where each element is the difference between the corresponding elements in the two given matrices. |
+| **Elementwise Product** | Yes | `Matrix.elementwiseMultiply` `(Matrix)` | *Not to be confused with the dot product or matrix multiplication*. Multiplies each element of this matrix by the corresponding element of the given matrix. |
+| **Elementwise Multiplication** | Yes | `Matrix *= MathNumber` | Scales each element of this matrix by the number. |
+| **Elementwise Division** | Yes | `Matrix.elementwiseDivide` `(Matrix)` | *Not to be confused with right or left division*. Divides each element of this matrix by the corresponding element of the given matrix. |
+| **Elementwise Quotient** | Yes | `Matrix /= MathNumber` | Divides each element of this matrix by the number. |
+| **Elementwise Power** | Yes | `Matrix.elementwisePower` `(MathNumber)` | *Not to be confused with actual matrix exponentials, which require square matrices.* Takes the power of each element of this matrix to the given number. |
+|  | Yes | `Matrix.elementwisePower` `(Matrix)` | Takes the power of each element of this matrix to the corresponding element of the given matrix. |
+| **Value Fill** | Yes | `Matrix = MathNumber` | Fills every element of the matrix with the number.|
+| **Absolute Value** | Yes | `Matrix.absInPlace()` | Rewrites the matrix with absolute values.|
+|  | No | `Matrix.abs()` | Returns a new matrix with the absolute values of each element of this matrix.|
+| **Matrix Transpose** | Yes | `Matrix.transposeInPlace()` | *Only for square matrices.* Transposes the matrix in place.|
+| | No | `Matrix.transpose()` | *Non-square matrices must use this.* Returns a new matrix that is the transposed `(c,r)` version of this `(r,c)` matrix.|
+| **Matrix Inverse** | No | `Matrix.inverse()` | *Fails if the matrix is square or singular.* Returns a new matrix that is the inverse of this one.|
+| **Backward Substitution** | No | `Matrix::backSubstitution` `(Matrix,Matrix)` | (static, literally called `Matrix::backSubstitution`). Given two matrices U and B, performs backward substitution on the linear system `U*X=B`, returning X as a new matrix, without mutating U or B. |
+| | No | `Matrix::backSubstitution` `(Matrix,Vector)` | Given a matrix U and vector b, performs backward substitution on the linear system `U*x=b`, returning x as a new vector, without mutating U or b. |
+| **Forward Substitution** | No | `Matrix::forwardSubstitution` `(Matrix,Matrix)` | (static, literally called `Matrix::forwardSubstitution`). Given two matrices L and B, performs forward substitution on the linear system `L*X=B`, returning X as a new matrix, without mutating L or B. |
+| | No | `Matrix::forwardSubstitution` `(Matrix,Vector)` | Given a matrix L and vector b, performs backward substitution on the linear system `L*x=b`, returning x as a new vector, without mutating L or b. |
+| **Linear Solution** | No | `Matrix::linearSolve` `(Matrix,Matrix)` | Given two matrices A and B, solves the linear system `A*X=B`, returning the matrix X holding the result. **A and B are modified in the course of this operation.**|
+| | No | `Matrix::linearSolve` `(Matrix,Vector)` | Given a matrix A and vector b, solves the linear system `A*x=b`, returning the vector x holding the result. **A and b are modified in the course of this operation.**|
+| **Dot Product** | No | `Matrix::dot(Matrix,Matrix)` | (note that this function is static, and is actually called verbatim as `Matrix::dot`) Takes the dot product of the two matrices. Returns a scalar. |
+| **Matrix Multiplication** | No | `Matrix * Matrix` | Returns a new matrix as the result of matrix multiplication. *This is not the dot product or elementwise multiplication.*|
+| **Matrix-Vector Product** | No | `Matrix * Vector` | Returns a new vector as the result of matrix-vector multiplication.|
+| **Matrix Comparison** | No | `Matrix == Matrix` | Not as simple as it seems. Floating point numbers cannot be exactly compared, so the matrices are said to be equal if they are (1) the same size, (2) each pair of values have the same exponent, and (3) each pair's significands are within a tolerance of 1e-6.|
+
+#### Scalar methods
+| Name | Syntax | Description |
+|-----------|--------|-------------|
+|**Minimum**|`Matrix.min()`|Returns the minimum value in the matrix.|
+|**Maximum**|`Matrix.max()`|Returns the maximum value in the matrix.|
+|**Frobenius Norm**|`Matrix::norm(Matrix)`|Returns the scalar result of the matrix Frobenius norm. Acts as a 2-norm on column or row vectors represented as matrices.|
+|**Infinity Norm**|`Matrix::infNorm(Matrix)`|Returns the scalar result of the matrix infinity norm. Acts as an infinity norm on column vectors, and a one-norm on row vectors represented as matrices.|
+|**One Norm**|`Matrix::oneNorm(Matrix)`|Returns the scalar result of the matrix one norm. Acts as a one norm on column vectors, and an infinity norm on row vectors represented as matrices.|
+
+#### Taking and inserting submatrices (slices)
+Use `.range(beginRow,beginColumn,endRow,endColumn)` to retrieve a rectangular "slice" of the matrix, i.e. a submatrix. Will fail if the dimensions are outside the range of the matrix, if the range goes backward, or if the resulting submatrix is `(0,0)`. **The submatrix is returned as a wholly new matrix rather than a reference.**
+
+Use `.insert(source,beginRow,beginColumn,endRow,endColumn)` to replace the given rectangular submatrix with the given "source" matrix. This will fail for the same reasons as `range`, but additionally will fail if the source matrix does not exactly match the given submatrix area. You can first crop a matrix with `range` to the appropriate size and then `insert` it if you want to "clone" a submatrix from it to another matrix. **This operation overwrites the submatrix in the destination matrix, i.e. it is in-place/mutating.**
+
 ## Adding to your project
 To use the included `Matrix` and `Vector` classes in your project, simply drop the contents of the `src` folder here into your project. You may want to separate this code into a `lib` folder to denote that it is not your project code if using it in HPSC.
 
