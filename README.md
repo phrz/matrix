@@ -3,6 +3,38 @@ by Paul Herz
 
 I developed this library off of Dr. Reynolds' implementation. It has been approved as a drop-in replacement for that library in the course of the High Performance Scientific Computing class.
 
+## Setup
+To use the included `Matrix` and `Vector` classes in your project, simply drop the contents of the `src` folder here into your project. You may want to separate this code into a `lib` folder to denote that it is not your project code if using it in HPSC.
+
+### Including in a Make project
+1. Copy the contents of `src` in this repo, including all headers, into a location in your project.
+2. Add `Matrix.cpp` and `Vector.cpp` to your build list (e.g. `g++ yourfile.cpp otherfile.cpp Matrix.cpp Vector.cpp`, including the relative path if they are in a different folder than your code.
+3. If you've placed this code in a different folder than where you are running the compiler, add the include header folder flag (`-I /lib` if the files are in `lib`).
+4. You will need to use at least the C++11 standard, specifically the GNU extension, using the flag `-std=gnu++11`. Your project may not work if it is using an older standard or a non-GNU extension standard. If you have trouble with a *newer* standard, file an issue and I will respond promptly.
+
+### Including in an Xcode project
+This example starts from absolute scratch in Xcode 9.0. This version changed the process of including files to be a little more complicated and restrictive. As such, it is difficult to actually store this code in a separate folder from your own. However, we can still use Xcode's Groups (pseudo-folders in the Xcode sidebar) to *visually* group them apart from your own code.
+
+1. Open Xcode to the welcome screen, **Create a New Xcode Project**. If you don't get a welcome screen, go to `File > New > Project...`, or press `Shift + Cmd + N`.
+2. Select **macOS**, **Command Line Tool** under the **Application** category. Click **Next**.
+3. Enter a product name. Select **C++** as your language. Click **Next**.
+4. Pick a location to save your project to. Be wary of the **Create Git repository on my Mac**. You may or may not want this checked. Xcode will create a folder named after your project here.
+5. Open up a Finder window next to Xcode. In that window, browse to where you've downloaded this code, specifically to the `src` folder. Select all of the contents of this folder (not the folder itself) and drag into the Xcode file sidebar, dropping them directly above or below the `main.cpp` file. 
+6. In the popup, select **Copy items if needed** and **Create groups**. Click **Finish**.
+7. These files may clutter your future or existing code. In the Xcode file toolbar (*Not in Finder*), select all the files belonging to the Matrix library by clicking the first file, holding `Shift`, and clicking the last. Right click, and select **New Group from Selection**. Give it a name like `matrix` or `lib`, then press `Return`. If you don't want this group *inside* of your `ProjectName` group, you can carefully drag it above the `ProjectName` group on the sidebar in Xcode, making it a sibling group rather than a child group.
+8. If you look in Finder and there is one copy of all the Matrix files inside /ProjectName/ProjectName and another in /ProjectName/ProjectName/GroupName, you will need to manually delete the old copies (in /ProjectName/ProjectName). This is a behavioral issue in Xcode 9.0.
+9. Select your project from the file sidebar in Xcode. Select the **Build Settings** tab. Search `C++ Language Dialect` in the search bar below the tab bar.
+10. Make sure the selection in the dropdown is *at least* **GNU++11 [-std=gnu++11]**. This library depends on at least C++11, and has been tested with only the C++11 standard with GNU extensions. Further testing is to be done.
+11. Select the **Build Phases** tab now under the same project, and open the **Compile Sources** dropdown by clicking on the arrow next to it. Make sure `Matrix.cpp` and `Vector.cpp` are added. If they are not, click the plus and add them.
+12. You should be able to add the following to your `main.cpp` file or any other file in the project:
+```
+#include "Matrix.h"
+#include "Vector.h"
+```
+Include one, the other, or both as needed.
+
+---
+
 ## Use
 This project includes two classes, `PH::Matrix` and `PH::Vector`. The Matrix class represents a two-dimensional, `m,n` matrix of `doubles`. The Vector class is only for one-dimensional vectors of `doubles`. The reason this library has a separate Vector class while the original doesn't is to avoid accidentally providing a 2D matrix in places where only a vector suffices.
 
@@ -35,7 +67,13 @@ You can create a Matrix one of many ways:
 - With a C++ initializer list: `Matrix({{1,2,3},{4,5,6},{7,8,9}});` (for you MATLAB folks. Fails if misshapen).
 - Again with an initializer list: `Matrix myMatrix = {{1,2,3},{4,5,6},{7,8,9}};`.
 
-### Copying and moving matrices:
+And in some more advanced ways, all explained in depth below:
+- From a 1D `std::vector<double>` (`Matrix::fromArray<r,c>(Raw1DArray)`)
+- From a 2D `std::vector< std::vector<double> >` (`Matrix(Raw2DArray)`)
+- From another matrix (copy constructor, copy assignment constructor, move constructor, move assignment constructor)
+- From a matrix previously saved to a file (`.loadFrom(filename)`) or as a string (`.serialize()`)
+
+### Copying and moving matrices
 the Matrix class has copy and move constructors, using the following syntaxes:
 ```cpp
 auto myMatrix = otherMatrix;
@@ -43,26 +81,56 @@ auto myMatrix = Matrix(otherMatrix);
 ```
 This will move the matrix if possible, otherwise it will perform a deep copy.
 
-### Converting `std::vector` into a Matrix:
-#### A one dimensional `std::vector<double>`
-If you have a one dimensional `std::vector`, you can make it into a Matrix with the following code. You can use the `Raw1DArray` type alias to guarantee compatibility with this library even if the numeral type changes from `double`.
-```cpp
-std::vector<double> myArray = {1,2,3,4,5,6,7,8,9};
-auto myMatrix = Matrix::fromArray<3,3>(myArray);
-```
-This will attempt to create a 3 row, 3 column Matrix and fill in the values from the array in reading order (left-to-right, top-to-bottom). It will throw an exception if the size of the array does not match the numbers in the `fromArray<r,c>` template. Because of the ambiguity as to the size of the desired matrix, there is not a direct-assignment alias for this method (you can't just say `Matrix myMatrix = myArray` when `myArray` is an `std::vector<double>`).
+#### Copying rows and columns
+Use `.copyRow(i)` and `.copyColumn(i)` to copy the i-th row and i-th column respectively, returning a `PH::Raw1DArray` (alias for `std::vector<double>`).
 
-#### A two dimensional `std::vector< std::vector<double> >`
-If you have a 2D `std::vector`, it is even easier because the dimensional data is already provided. I recommend using the `Raw2DArray` type alias I provide to avoid typing too much.
-```cpp
-Raw2DArray my2DArray = {{1,2,3},{4,5,6},{7,8,9}};
+### Accessing elements in a Matrix
+Unlike the library on which this one is based, we do not use the subscript (`[]`) operator. In the original library, the subscript operator exposed the underlying data structure, which was column-ordered. Whereas users would expect to access the element at row `r` and column `c` with `matrix[r][c]`, it would be the reverse. As such, the subscript operator has not merely been **changed**, as this would cause migrated code to behave unexpectedly — it has been removed and will return a `PH::NotImplementedException` when used.
 
-// Method 1
-Matrix myMatrix = my2DArray;
-// Method 2
-auto myMatrix = Matrix(my2DArray);
+This library provides exactly two accessors, not including automatic immutable versions for `const Matrix`:
+```cpp
+// get the element at row r and column c
+myMatrix(r,c);
+
+// get the element at linear index i (reading order)
+myMatrix(i);
 ```
-Notice that even though the `std::vector` is constructed with an initializer list, the `Matrix(Raw2DArray)` constructor is not the same as the above initializer list constructor, which lets you provide literal values directly. These methods will fail if the raw array is not consistenly shaped.
+
+#### Taking and inserting submatrices
+Use `.range(beginRow,beginColumn,endRow,endColumn)` to retrieve a rectangular "slice" of the matrix, i.e. a submatrix. Will fail if the dimensions are outside the range of the matrix, if the range goes backward, or if the resulting submatrix is `(0,0)`. **The submatrix is returned as a wholly new matrix rather than a reference.**
+
+Use `.insert(source,beginRow,beginColumn,endRow,endColumn)` to replace the given rectangular submatrix with the given "source" matrix. This will fail for the same reasons as `range`, but additionally will fail if the source matrix does not exactly match the given submatrix area. You can first crop a matrix with `range` to the appropriate size and then `insert` it if you want to "clone" a submatrix from it to another matrix. **This operation overwrites the submatrix in the destination matrix, i.e. it is in-place/mutating.**
+
+### Matrix dimensions
+- Use `.isSquare()` to retrieve a boolean value representing if the matrix is square (rows = columns).
+- `.size()` returns the number of cells (rows * columns).
+- `.rows()` and `.columns()` returns the number of rows and columns, respectively.
+- `.dimensions()` returns a `PH::Dimensions` struct, useful for comparing for equality with the same struct from another matrix. This feature is used internally.
+
+#### Resizing arrays
+Use `.resize(r,c)` to resize your array to size `(r,c)`. This will destroy elements if shrinking and create new cells if expanding. Value initialization depends on the behavior of `std::vector::resize` for the underlying data structures of the Matrix and may or may not be zero in newly created cells.
+
+### String representation
+To return a string representation of the Matrix, use `.str(int precision)`. If no argument is provided, default (full) precision is displayed. This returns an `std::string`, and **not** a `char*` ("C String").
+
+To print a string representation directly, just use `std::cout << myMatrix`. This method uses the above `.str` method with precision `PH::Matrix.displayPrecision`.
+
+### Saving and Loading
+This is extremely easy in this library. To save to a format compatible with Numpy etc. (space-delimited columns, newline-delimited rows), use the `saveTo` method:
+```cpp
+// relative path
+myMatrix.saveTo("../data/myMatrix.txt");
+
+// absolute path
+myMatrix.saveTo("/Users/paul/Desktop/myMatrix.txt");
+```
+This will throw a runtime error saying `Could not open file (/bad/path/to/file) to save to.` if you are providing a folder that does not exist or a path to which the program does not have access.
+
+Loading is just as easy, assuming the same format.
+```cpp
+Matrix myMatrix;
+myMatrix.loadFrom("../data/myMatrix.txt");
+```
 
 ### Convenience initializers
 The **identity matrix** is a square (n,n), zeroed-out array with ones in the diagonals. It has been called `eye` here to accomodate the refugees from MATLAB.
@@ -99,22 +167,26 @@ std::cout << myMatrix;
     0.6    0.7    0.8
 ```
 
-### Serializing and deserializing (saving to and loading from a file)
-This is extremely easy in this library. To save to a format compatible with Numpy etc. (space-delimited columns, newline-delimited rows), use the `saveTo` method:
+### Converting STL vectors into a Matrix
+#### A one dimensional STL vector
+If you have a one dimensional `std::vector`, you can make it into a Matrix with the following code. You can use the `Raw1DArray` type alias to guarantee compatibility with this library even if the numeral type changes from `double`.
 ```cpp
-// relative path
-myMatrix.saveTo("../data/myMatrix.txt");
-
-// absolute path
-myMatrix.saveTo("/Users/paul/Desktop/myMatrix.txt");
+std::vector<double> myArray = {1,2,3,4,5,6,7,8,9};
+auto myMatrix = Matrix::fromArray<3,3>(myArray);
 ```
-This will throw a runtime error saying `Could not open file (/bad/path/to/file) to save to.` if you are providing a folder that does not exist or a path to which the program does not have access.
+This will attempt to create a 3 row, 3 column Matrix and fill in the values from the array in reading order (left-to-right, top-to-bottom). It will throw an exception if the size of the array does not match the numbers in the `fromArray<r,c>` template. Because of the ambiguity as to the size of the desired matrix, there is not a direct-assignment alias for this method (you can't just say `Matrix myMatrix = myArray` when `myArray` is an `std::vector<double>`).
 
-Loading is just as easy, assuming the same format.
+#### A two dimensional STL vector
+If you have a 2D `std::vector`, it is even easier because the dimensional data is already provided. I recommend using the `Raw2DArray` type alias I provide to avoid typing too much.
 ```cpp
-Matrix myMatrix;
-myMatrix.loadFrom("../data/myMatrix.txt");
+Raw2DArray my2DArray = {{1,2,3},{4,5,6},{7,8,9}};
+
+// Method 1
+Matrix myMatrix = my2DArray;
+// Method 2
+auto myMatrix = Matrix(my2DArray);
 ```
+Notice that even though the `std::vector` is constructed with an initializer list, the `Matrix(Raw2DArray)` constructor is not the same as the above initializer list constructor, which lets you provide literal values directly. These methods will fail if the raw array is not consistenly shaped.
 
 ### Iterating matrices
 Instead of writing cumbersome `for` loops and (even worse) nested `for` loops, the Matrix class provides several useful iterators.
@@ -173,35 +245,6 @@ myMatrix.forEach([&](auto value, Index row, Index column) {
 });
 ```
 
-#### Resizing arrays (bigger or smaller)
-Use `.resize(r,c)` to resize your array to size `(r,c)`. This will destroy elements if shrinking and create new cells if expanding. Value initialization depends on the behavior of `std::vector::resize` for the underlying data structures of the Matrix and may or may not be zero in newly created cells.
-
-#### Matrix dimensions
-- Use `.isSquare()` to retrieve a boolean value representing if the matrix is square (rows = columns).
-- `.size()` returns the number of cells (rows * columns).
-- `.rows()` and `.columns()` returns the number of rows and columns, respectively.
-- `.dimensions()` returns a `PH::Dimensions` struct, useful for comparing for equality with the same struct from another matrix. This feature is used internally.
-
-#### Copying rows and columns
-Use `.copyRow(i)` and `.copyColumn(i)` to copy the i-th row and i-th column respectively, returning a `PH::Raw1DArray` (alias for `std::vector<double>`).
-
-#### Accessing elements in a Matrix
-Unlike the library on which this one is based, we do not use the subscript (`[]`) operator. In the original library, the subscript operator exposed the underlying data structure, which was column-ordered. Whereas users would expect to access the element at row `r` and column `c` with `matrix[r][c]`, it would be the reverse. As such, the subscript operator has not merely been **changed**, as this would cause migrated code to behave unexpectedly — it has been removed and will return a `PH::NotImplementedException` when used.
-
-This library provides exactly two accessors, not including automatic immutable versions for `const Matrix`:
-```cpp
-// get the element at row r and column c
-myMatrix(r,c);
-
-// get the element at linear index i (reading order)
-myMatrix(i);
-```
-
-#### String representation
-To return a string representation of the Matrix, use `.str(int precision)`. If no argument is provided, default (full) precision is displayed. This returns an `std::string`, and **not** a `char*` ("C String").
-
-To print a string representation directly, just use `std::cout << myMatrix`. This method uses the above `.str` method with precision `PH::Matrix.displayPrecision`.
-
 #### Matrix arithmetic
 Most arithmetic operations are divided into two categories: mutating (in-place) and non-mutating. Mutating methods will act upon the first matrix in the operation, whereas non-mutating methods will return a new matrix as a result of the operation. Where the difference is not made clear with just non-Latin operators (`+`,`-`,`/`,`*`, etc.), an explicit English name is used to avoid ambiguity.
 
@@ -247,37 +290,3 @@ Below, type names will be used where you would expect variable names for concisi
 |**Frobenius Norm**|`Matrix::norm(Matrix)`|Returns the scalar result of the matrix Frobenius norm. Acts as a 2-norm on column or row vectors represented as matrices.|
 |**Infinity Norm**|`Matrix::infNorm(Matrix)`|Returns the scalar result of the matrix infinity norm. Acts as an infinity norm on column vectors, and a one-norm on row vectors represented as matrices.|
 |**One Norm**|`Matrix::oneNorm(Matrix)`|Returns the scalar result of the matrix one norm. Acts as a one norm on column vectors, and an infinity norm on row vectors represented as matrices.|
-
-#### Taking and inserting submatrices (slices)
-Use `.range(beginRow,beginColumn,endRow,endColumn)` to retrieve a rectangular "slice" of the matrix, i.e. a submatrix. Will fail if the dimensions are outside the range of the matrix, if the range goes backward, or if the resulting submatrix is `(0,0)`. **The submatrix is returned as a wholly new matrix rather than a reference.**
-
-Use `.insert(source,beginRow,beginColumn,endRow,endColumn)` to replace the given rectangular submatrix with the given "source" matrix. This will fail for the same reasons as `range`, but additionally will fail if the source matrix does not exactly match the given submatrix area. You can first crop a matrix with `range` to the appropriate size and then `insert` it if you want to "clone" a submatrix from it to another matrix. **This operation overwrites the submatrix in the destination matrix, i.e. it is in-place/mutating.**
-
-## Adding to your project
-To use the included `Matrix` and `Vector` classes in your project, simply drop the contents of the `src` folder here into your project. You may want to separate this code into a `lib` folder to denote that it is not your project code if using it in HPSC.
-
-### Including into a traditional project (GCC, Makefiles)
-1. Copy the contents of `src` in this repo, including all headers, into a location in your project.
-2. Add `Matrix.cpp` and `Vector.cpp` to your build list (e.g. `g++ yourfile.cpp otherfile.cpp Matrix.cpp Vector.cpp`, including the relative path if they are in a different folder than your code.
-3. If you've placed this code in a different folder than where you are running the compiler, add the include header folder flag (`-I /lib` if the files are in `lib`).
-4. You will need to use at least the C++11 standard, specifically the GNU extension, using the flag `-std=gnu++11`. Your project may not work if it is using an older standard or a non-GNU extension standard. If you have trouble with a *newer* standard, file an issue and I will respond promptly.
-
-### Including into an Xcode Project (Xcode 9.0)
-This example starts from absolute scratch in Xcode 9.0. This version changed the process of including files to be a little more complicated and restrictive. As such, it is difficult to actually store this code in a separate folder from your own. However, we can still use Xcode's Groups (pseudo-folders in the Xcode sidebar) to *visually* group them apart from your own code.
-
-1. Open Xcode to the welcome screen, and click **Create a New Xcode Project**. If you don't get a welcome screen when you open Xcode, go to `File > New > Project...` in the toolbar, or press `Shift + Cmd + N`.
-2. Select **macOS** from the tabs at the top of the New Project wizard, then select **Command Line Tool** under the **Application** category (at the top of the list). Click **Next**.
-3. Enter a product name, preferably without spaces. Select **C++** as your language. Click **Next**.
-4. Pick a location to save your project to. Be wary of the **Create Git repository on my Mac**. You may or may not want this checked. Xcode will create a folder named after your project here, so there's no need to do so manually.
-5. Open up a Finder window next to Xcode. In that window, browse to where you've downloaded/cloned this code, specifically to the `src` folder. Select all of the *contents* of this folder (not the folder itself) and *drag* the files into Xcode, dropping them directly above or below the `main.cpp` file. 
-6. In the popup, select **Copy items if needed** and **Create groups**. Click **Finish**.
-7. These files may clutter your future or existing code. You can split them off into a group on the sidebar, but it will not change their actual location in the folder. Select all the files belonging to the Matrix library by clicking the first file, holding `Shift`, and clicking the last. Right click, and select **New Group from Selection**. Name it something like `lib` or `matrix` to identify it as separate. Now all of the Matrix library files will be bundled into a folder and separated. If you don't want this group *inside* of your `ProjectName` group, you can carefully drag it above the `ProjectName` group on the sidebar in Xcode and the group as well as the folder will be moved to a *sibling* of the `ProjectName` group.
-8. If you look in Finder and it appears that Xcode has *copied*, rather than *moved* the Matrix files in your project (there is one copy of all the files inside /ProjectName/ProjectName and another in /ProjectName/ProjectName/GroupName), you will need to manually delete the old copies (in /ProjectName/ProjectName). This is a behavioral issue in Xcode 9.0.
-9. Select your project from the file sidebar in Xcode (it's the blueprint icon, at the top usually). Select the **Build Settings** tab. Search `C++ Language Dialect` in the search bar below the tab bar.
-10. In the resulting setting that appears, make sure the selection is *at least* **GNU++11 [-std=gnu++11]**. This library depends on at least C++11, and has been tested with only the C++11 standard with GNU extensions. Further testing is to be done.
-11. Select the **Build Phases** tab now under the same project, and open the **Compile Sources** dropdown by clicking on the arrow next to it. Make sure `Matrix.cpp` and `Vector.cpp` are added. If they are not, click the plus and add them.
-12. You should be able to add the following to your `main.cpp` file or any other file in the project:
-```
-#include "Matrix.h"
-```
-Xcode should be able to find the header files.
