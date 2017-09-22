@@ -121,7 +121,7 @@ Instead of writing cumbersome `for` loops and (even worse) nested `for` loops, t
 ```cpp
 Matrix myMatrix = {{1,2,3},
                    {4,5,6},
-				   {7,8,9}}
+                   {7,8,9}}
 ```
 #### Iterating columns
 There are two ways to iterate columns: one gives you access to the column through a `Raw1DArray` reference (`std::vector<double>`), and the other is immutable (`const`). Both run synchronously, and provide the column number as an parameter in the callback.
