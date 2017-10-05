@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <numeric>
 #include <random>
+#include <functional>
 
 // singularity tolerance
 #define STOL 1.e-15
