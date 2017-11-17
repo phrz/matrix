@@ -15,7 +15,7 @@
  */
 
 #define CATCH_CONFIG_MAIN
-#include "catch.h"
+#include "catch.hpp"
 
 #include "Matrix.h"
 #include "Vector.h"
@@ -79,7 +79,7 @@ TEST_CASE("Matrix should be constructable by nested std::initializer_list object
 		}
 	}
 	
-	REQUIRE_THROWS(PH::Matrix m2({
+	REQUIRE_THROWS(PH::Matrix({
 		{1, 2, 3},
 		{4, 5},
 		{7}
@@ -137,7 +137,7 @@ TEST_CASE("Matrix should be constructable by 2D std::vector", "[matrix]") {
 		}
 	}
 	
-	REQUIRE_THROWS(auto a = PH::Matrix(badData));
+	REQUIRE_THROWS(PH::Matrix(badData));
 }
 
 
@@ -174,7 +174,7 @@ TEST_CASE("random(r,c) should create a matrix of uniform distribution 0...1", "[
 	auto prevValue = 0.0;
 	random.mapElements([&](MathNumber& element, Index r, Index c) {
 		// make sure not all same
-		if(allSame && r != 0 || c != 0) {
+		if(allSame && (r != 0 || c != 0)) {
 			if(prevValue != element) allSame = false;
 		}
 		
